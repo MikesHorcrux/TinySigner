@@ -80,13 +80,26 @@ BUILD_SETTINGS="$(
 
 MARKETING_VERSION="$(printf "%s" "$BUILD_SETTINGS" | setting_from_xcodebuild MARKETING_VERSION)"
 BUILD_NUMBER="$(printf "%s" "$BUILD_SETTINGS" | setting_from_xcodebuild CURRENT_PROJECT_VERSION)"
-TEAM_ID="$(printf "%s" "$BUILD_SETTINGS" | setting_from_xcodebuild DEVELOPMENT_TEAM)"
+TEAM_ID="${DEVELOPMENT_TEAM_ID:-$(printf "%s" "$BUILD_SETTINGS" | setting_from_xcodebuild DEVELOPMENT_TEAM)}"
 DMG_BASENAME="$APP_NAME-$MARKETING_VERSION"
 DMG_PATH="$RELEASE_ROOT/$DMG_BASENAME.dmg"
 APP_PATH="$EXPORT_PATH/$APP_NAME.app"
 
-if [[ -z "$MARKETING_VERSION" || -z "$BUILD_NUMBER" || -z "$TEAM_ID" ]]; then
-  echo "Could not read version/build/team settings from Xcode." >&2
+if [[ -z "$TEAM_ID" ]]; then
+  TEAM_ID="$(
+    security find-identity -v -p codesigning 2>/dev/null \
+      | sed -nE 's/.*Developer ID Application:.*\(([A-Z0-9]{10})\).*/\1/p' \
+      | head -n 1
+  )"
+fi
+
+if [[ -z "$MARKETING_VERSION" || -z "$BUILD_NUMBER" ]]; then
+  echo "Could not read version/build settings from Xcode." >&2
+  exit 1
+fi
+
+if [[ -z "$TEAM_ID" ]]; then
+  echo "Could not determine a Developer ID team. Set DEVELOPMENT_TEAM_ID or install a Developer ID certificate." >&2
   exit 1
 fi
 
@@ -122,6 +135,7 @@ xcodebuild archive \
   -destination 'generic/platform=macOS' \
   -archivePath "$ARCHIVE_PATH" \
   -allowProvisioningUpdates \
+  DEVELOPMENT_TEAM="$TEAM_ID" \
   | tee "$RELEASE_ROOT/archive.log"
 
 echo "Exporting Developer ID signed app..."

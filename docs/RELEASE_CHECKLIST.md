@@ -71,6 +71,12 @@ python3 script/generate_app_icon.py
 ./script/build_release_dmg.sh
 ```
 
+- If the Xcode project does not set a development team, provide it locally through the environment:
+
+```bash
+DEVELOPMENT_TEAM_ID="YOURTEAMID" ./script/build_release_dmg.sh
+```
+
 - For public distribution, notarize and staple the DMG before attaching it to a GitHub release:
 
 ```bash

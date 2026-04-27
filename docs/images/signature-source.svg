@@ -11,8 +11,8 @@
 <rect x="760" y="70" width="370" height="420" rx="24" fill="#1f303a"/>
 <text x="800" y="130" font-family="Avenir Next, sans-serif" font-size="28" fill="#f4fbff" font-weight="700">Selected Field</text>
 <text x="800" y="190" font-family="Avenir Next, sans-serif" font-size="16" fill="#b5c4ca">Signature Source</text>
-<rect x="800" y="210" width="280" height="46" rx="12" fill="#0c1820"/><text x="824" y="240" font-family="Avenir Next, sans-serif" font-size="16" fill="#dff8fb">Typed name: Mike Van</text>
-<rect x="800" y="276" width="280" height="46" rx="12" fill="#18c8d0"/><text x="824" y="306" font-family="Avenir Next, sans-serif" font-size="16" fill="#041014" font-weight="700">Drawn Signature: Mike</text>
+<rect x="800" y="210" width="280" height="46" rx="12" fill="#0c1820"/><text x="824" y="240" font-family="Avenir Next, sans-serif" font-size="16" fill="#dff8fb">Typed name: Alex Rivera</text>
+<rect x="800" y="276" width="280" height="46" rx="12" fill="#18c8d0"/><text x="824" y="306" font-family="Avenir Next, sans-serif" font-size="16" fill="#041014" font-weight="700">Drawn Signature: Alex</text>
 <rect x="800" y="342" width="280" height="46" rx="12" fill="#0c1820"/><text x="824" y="372" font-family="Avenir Next, sans-serif" font-size="16" fill="#dff8fb">Imported Image: PNG</text>
 <text x="800" y="438" font-family="Avenir Next, sans-serif" font-size="15" fill="#aab8bf">Switch each placed field without redrawing.</text>
 </svg>

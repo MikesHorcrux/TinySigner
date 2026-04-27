@@ -17,8 +17,8 @@
   <text x="154" y="228" font-family="Avenir Next, sans-serif" font-size="16" fill="#aebcc3">Manage signer details and reusable local signature assets.</text>
   <rect x="154" y="268" width="460" height="292" rx="22" fill="url(#card)"/>
   <text x="190" y="318" font-family="Avenir Next, sans-serif" font-size="22" fill="#0b2940" font-weight="700">Signer Profile</text>
-  <text x="190" y="366" font-family="Avenir Next, sans-serif" font-size="14" fill="#55707c">Full name</text><rect x="190" y="378" width="330" height="38" rx="9" fill="#ffffff" stroke="#bdd4db"/><text x="210" y="403" font-family="Avenir Next, sans-serif" font-size="15" fill="#0b2940">Mike Van Amblen</text>
-  <text x="190" y="448" font-family="Avenir Next, sans-serif" font-size="14" fill="#55707c">Initials</text><rect x="190" y="460" width="120" height="38" rx="9" fill="#ffffff" stroke="#bdd4db"/><text x="210" y="485" font-family="Avenir Next, sans-serif" font-size="15" fill="#0b2940">MV</text>
+  <text x="190" y="366" font-family="Avenir Next, sans-serif" font-size="14" fill="#55707c">Full name</text><rect x="190" y="378" width="330" height="38" rx="9" fill="#ffffff" stroke="#bdd4db"/><text x="210" y="403" font-family="Avenir Next, sans-serif" font-size="15" fill="#0b2940">Alex Rivera</text>
+  <text x="190" y="448" font-family="Avenir Next, sans-serif" font-size="14" fill="#55707c">Initials</text><rect x="190" y="460" width="120" height="38" rx="9" fill="#ffffff" stroke="#bdd4db"/><text x="210" y="485" font-family="Avenir Next, sans-serif" font-size="15" fill="#0b2940">AR</text>
   <text x="340" y="448" font-family="Avenir Next, sans-serif" font-size="14" fill="#55707c">Date format</text><rect x="340" y="460" width="180" height="38" rx="9" fill="#ffffff" stroke="#bdd4db"/><text x="360" y="485" font-family="Avenir Next, sans-serif" font-size="15" fill="#0b2940">MMM d, yyyy</text>
   <rect x="650" y="268" width="540" height="292" rx="22" fill="url(#card)"/>
   <text x="686" y="318" font-family="Avenir Next, sans-serif" font-size="22" fill="#0b2940" font-weight="700">Signature Setup</text>

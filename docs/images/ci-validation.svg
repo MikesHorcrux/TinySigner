@@ -13,7 +13,7 @@
     <rect width="290" height="230" rx="24" fill="#f7fbfb"/>
     <circle cx="52" cy="54" r="22" fill="#0b2940"/><text x="52" y="62" text-anchor="middle" font-size="22" fill="#ffffff" font-weight="700">1</text>
     <text x="88" y="62" font-size="22" fill="#0b2940" font-weight="700">Push / PR</text>
-    <rect x="42" y="104" width="204" height="48" rx="12" fill="#0b2940"/><text x="64" y="134" font-size="16" fill="#ecfbff">github.com/MikesHorcrux</text>
+    <rect x="42" y="104" width="204" height="48" rx="12" fill="#0b2940"/><text x="64" y="134" font-size="16" fill="#ecfbff">github.com/owner/repo</text>
     <text x="42" y="188" font-size="15" fill="#55707c">CI starts from the public repository.</text>
   </g>
   <path d="M385 280 H470" stroke="#18c8d0" stroke-width="8" stroke-linecap="round"/><path d="M452 260 L476 280 L452 300" fill="none" stroke="#18c8d0" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
