@@ -18,6 +18,8 @@ TinySigner v1 does not require a network service to sign PDFs. It does not uploa
 ## PDF Handling
 
 - The original PDF is opened for preview and placement.
+- Smart field detection runs locally using PDF text extraction and rendered page geometry.
+- Detection suggestions are not uploaded and are not exported unless the user accepts them as fields.
 - TinySigner exports a separate flattened copy.
 - The original file is not modified by the export process.
 

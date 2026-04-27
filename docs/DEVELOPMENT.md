@@ -49,6 +49,8 @@ Smart suggestions also render in `SigningOverlayView`, but remain separate from 
 
 ## Smart Detection
 
+![Smart detection suggestions](images/smart-suggestions.svg)
+
 Detection is intentionally heuristic and local-only:
 
 1. Extract searchable PDF text labels from each `PDFPage`.
@@ -59,7 +61,21 @@ Detection is intentionally heuristic and local-only:
 
 The app only auto-creates fields when the user accepts high-confidence suggestions. Medium-confidence suggestions require an explicit click.
 
+## Settings And Profile
+
+![Settings and signature setup](images/settings-signature-setup.svg)
+
+Signer identity and reusable signature assets live in `SettingsView` and `SignatureSetupSheet`. The editor inspector stays document-focused: tools, smart suggestions, selected field values, and signature source selection for the selected field.
+
+Profile and asset persistence use SwiftData models:
+
+- `SignerProfile`: full name, initials, preferred date format, default asset IDs.
+- `SignatureAsset`: typed, drawn, imported, or initials asset data.
+- `RecentDocument`: security-scoped bookmark data for reopened PDFs.
+
 ## Export Rendering
+
+![Export success actions](images/export-success.svg)
 
 Export follows this sequence:
 
@@ -68,12 +84,6 @@ Export follows this sequence:
 3. Draw each source PDF page.
 4. Draw TinySigner fields assigned to that page.
 5. Close the output PDF.
-
-## SwiftData Models
-
-- `SignerProfile`: name, initials, date format, default signature asset IDs.
-- `SignatureAsset`: typed, drawn, imported, or initials asset with optional image data.
-- `RecentDocument`: recent PDF security-scoped bookmark data.
 
 ## Build
 
@@ -104,6 +114,12 @@ xcodebuild test \
   -only-testing:TinySignerUITests \
   CODE_SIGNING_ALLOWED=NO
 ```
+
+## CI
+
+![CI validation flow](images/ci-validation.svg)
+
+`.github/workflows/ci.yml` runs `xcodebuild build` and `TinySignerTests` on `macos-latest` with `CODE_SIGNING_ALLOWED=NO`. UI smoke tests are documented and kept local because hosted macOS UI automation can be less predictable than unit-level validation.
 
 ## Visual Assets
 

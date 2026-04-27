@@ -28,6 +28,8 @@ Click a tool, then click on the PDF. After placing a field, TinySigner returns t
 
 ## Smart Suggestions
 
+![Smart field suggestions](images/smart-suggestions.svg)
+
 When a PDF opens, TinySigner scans searchable PDF text and rendered page geometry for likely signing fields:
 
 - Signature and initials labels with nearby lines.
@@ -63,6 +65,8 @@ Changing the source affects only the selected field, so you can use a drawn full
 
 ## Manage Signer Profile
 
+![Settings and signature setup](images/settings-signature-setup.svg)
+
 Open **TinySigner > Settings** to manage signer defaults:
 
 - Full name.
@@ -86,6 +90,8 @@ In Settings, **Open Signature Setup** to save reusable assets:
 Saved assets persist locally through SwiftData.
 
 ## Export
+
+![Export success actions](images/export-success.svg)
 
 Use **Export Signed PDF** to create a flattened copy. TinySigner renders the original PDF content, then draws each placed field into normal page content.
 

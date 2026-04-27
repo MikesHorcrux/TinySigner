@@ -32,6 +32,22 @@ When a signature or initials field is selected, use **Signature Source** in the 
 
 Profile setup and reusable signature creation live in **TinySigner > Settings** so the editor inspector can stay focused on the active document.
 
+## Smart Suggestions
+
+![Smart field suggestions](docs/images/smart-suggestions.svg)
+
+TinySigner scans searchable PDF text and rendered page geometry locally to find likely signing fields. Suggestions remain reversible ghost outlines until you click one or choose **Accept High Confidence**.
+
+## Settings And Export
+
+![Settings and signature setup](docs/images/settings-signature-setup.svg)
+
+Signer profile, date format, default signature assets, and reusable signature setup live in the native Settings window.
+
+![Export success actions](docs/images/export-success.svg)
+
+After export, TinySigner confirms the flattened copy and offers quick actions to open it, reveal it in Finder, or sign another PDF.
+
 ## App Icon
 
 <img src="docs/images/app-icon-preview.png" alt="TinySigner app icon" width="160">
@@ -86,6 +102,8 @@ xcodebuild test \
 
 GitHub Actions runs the app build and unit suite with code signing disabled. UI tests are kept as local smoke tests because macOS runner UI availability can be less predictable.
 
+![CI validation flow](docs/images/ci-validation.svg)
+
 ## User Flow
 
 1. Open TinySigner.
@@ -114,7 +132,7 @@ docs/
   DEVELOPMENT.md
   PRIVACY.md
   RELEASE_CHECKLIST.md
-  images/
+  images/      SVG documentation graphics and app icon preview
 
 script/
   build_and_run.sh

@@ -12,3 +12,4 @@
 - Added smart field suggestions for likely signature, date, initials, and checkbox fields.
 - Added native Settings for signer defaults and reusable signature setup.
 - Added export success actions, native Mac menu commands, and GitHub Actions build/unit-test CI.
+- Added documentation images for smart suggestions, Settings/signature setup, export success, and CI validation.
