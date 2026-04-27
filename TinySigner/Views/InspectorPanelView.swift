@@ -16,8 +16,8 @@ struct InspectorPanelView: View {
                 toolSection
 
                 if let profile {
-                    ProfileCard(profile: profile)
-                    SignatureAssetSection(
+                    SignerProfileCard(profile: profile)
+                    SignatureLibrarySection(
                         profile: profile,
                         signatureAssets: signatureAssets,
                         drawingStrokes: $drawingStrokes,
@@ -248,119 +248,5 @@ struct InspectorPanelView: View {
         } catch {
             editor.lastError = "TinySigner could not save the signature library: \(error.localizedDescription)"
         }
-    }
-}
-
-private struct ProfileCard: View {
-    @Bindable var profile: SignerProfile
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Signer")
-                .font(.headline)
-            TextField("Full name", text: $profile.fullName)
-                .textFieldStyle(.roundedBorder)
-            TextField("Initials", text: $profile.initials)
-                .textFieldStyle(.roundedBorder)
-            TextField("Date format", text: $profile.preferredDateFormat)
-                .textFieldStyle(.roundedBorder)
-            Text("Example: \(PDFEditorStore.formattedDate(using: profile.preferredDateFormat))")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-    }
-}
-
-private struct SignatureAssetSection: View {
-    @Bindable var profile: SignerProfile
-    var signatureAssets: [SignatureAsset]
-    @Binding var drawingStrokes: [SignatureStroke]
-    var saveTypedSignature: () -> Void
-    var saveTypedInitials: () -> Void
-    var saveDrawnSignature: () -> Void
-    var importSignatureImage: () -> Void
-    var deleteAsset: (SignatureAsset, SignerProfile) -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Signature Library")
-                .font(.headline)
-
-            HStack {
-                Button("Save Typed") { saveTypedSignature() }
-                Button("Save Initials") { saveTypedInitials() }
-            }
-            HStack {
-                Button("Import Image") { importSignatureImage() }
-                Button("Save Drawing") { saveDrawnSignature() }
-            }
-
-            SignatureDrawingCanvas(strokes: $drawingStrokes)
-                .frame(height: 118)
-                .background(.background, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(.separator, lineWidth: 1)
-                }
-                .overlay(alignment: .topLeading) {
-                    Text("Draw here")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(8)
-                }
-
-            Button("Clear Drawing") {
-                drawingStrokes = []
-            }
-            .buttonStyle(.link)
-
-            if signatureAssets.isEmpty {
-                Text("Save or import a signature to reuse it on future PDFs.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(signatureAssets, id: \.id) { asset in
-                    HStack(spacing: 10) {
-                        SignatureAssetPreview(asset: asset)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(asset.name)
-                                .lineLimit(1)
-                            Text(asset.kind.title)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Button(role: .destructive) {
-                            deleteAsset(asset, profile)
-                        } label: {
-                            Image(systemName: "trash")
-                        }
-                        .buttonStyle(.borderless)
-                    }
-                    .padding(8)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                }
-            }
-        }
-    }
-}
-
-private struct SignatureAssetPreview: View {
-    var asset: SignatureAsset
-
-    var body: some View {
-        Group {
-            if let data = asset.imageData, let image = NSImage(data: data) {
-                Image(nsImage: image)
-                    .resizable()
-                    .scaledToFit()
-            } else {
-                Image(systemName: "signature")
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .frame(width: 58, height: 34)
-        .padding(4)
-        .background(.background, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }

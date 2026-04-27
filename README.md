@@ -82,7 +82,7 @@ xcodebuild test \
 ## User Flow
 
 1. Open TinySigner.
-2. Click **Open PDF** or use the demo fixture during UI testing.
+2. Click **Open PDF** and choose a local PDF.
 3. Choose a tool in the inspector: Signature, Initials, Text, Date, or Checkbox.
 4. Click the PDF where the field should go. Signature placement is line-aware, so clicking a signature line places the writing on that line.
 5. Drag, resize, or delete the selected field as needed.
