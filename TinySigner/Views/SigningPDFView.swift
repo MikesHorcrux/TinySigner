@@ -4,6 +4,7 @@ import PDFKit
 final class SigningPDFView: PDFView {
     var activeTool: SigningTool = .select
     var fields: [PlacedField] = []
+    var fieldSuggestions: [DetectedFieldSuggestion] = []
     var selectedFieldID: UUID?
     var signatureAssetsByID: [UUID: Data] = [:]
 
@@ -13,6 +14,7 @@ final class SigningPDFView: PDFView {
     var onBeginDragField: (() -> Void)?
     var onFinishDragField: (() -> Void)?
     var onDeleteSelectedField: (() -> Void)?
+    var onAcceptSuggestion: ((UUID) -> Void)?
     var onPageChange: ((Int) -> Void)?
 
     private enum InteractionState {
@@ -52,7 +54,7 @@ final class SigningPDFView: PDFView {
     }
 
     func refreshSigningOverlay() {
-        overlayView.configure(fields: fields, selectedFieldID: selectedFieldID, signatureAssetsByID: signatureAssetsByID)
+        overlayView.configure(fields: fields, fieldSuggestions: fieldSuggestions, selectedFieldID: selectedFieldID, signatureAssetsByID: signatureAssetsByID)
         overlayView.needsDisplay = true
     }
 
@@ -89,6 +91,11 @@ final class SigningPDFView: PDFView {
                 interactionState = .move(MoveState(fieldID: hitField.id, pageIndex: pageIndex, lastPoint: pagePoint))
             }
             onBeginDragField?()
+            return
+        }
+
+        if let hitSuggestion = hitSuggestion(onPage: pageIndex, at: pagePoint) {
+            onAcceptSuggestion?(hitSuggestion.id)
             return
         }
 
@@ -176,6 +183,16 @@ final class SigningPDFView: PDFView {
         }
     }
 
+    private func hitSuggestion(onPage pageIndex: Int, at point: CGPoint) -> DetectedFieldSuggestion? {
+        fieldSuggestions
+            .filter { $0.pageIndex == pageIndex && $0.rectInPageSpace.insetBy(dx: -8, dy: -8).contains(point) }
+            .sorted {
+                if $0.confidence != $1.confidence { return $0.confidence.rank > $1.confidence.rank }
+                return $0.rectInPageSpace.area < $1.rectInPageSpace.area
+            }
+            .first
+    }
+
     private func isResizeHandleHit(for field: PlacedField, at point: CGPoint) -> Bool {
         SigningFieldRenderer.resizeHandleRect(for: field.rectInPageSpace)
             .insetBy(dx: -6, dy: -6)
@@ -206,4 +223,18 @@ final class SigningPDFView: PDFView {
         overlayView.layer?.backgroundColor = NSColor.clear.cgColor
         addSubview(overlayView, positioned: .above, relativeTo: nil)
     }
+}
+
+private extension DetectionConfidence {
+    var rank: Int {
+        switch self {
+        case .high: 3
+        case .medium: 2
+        case .low: 1
+        }
+    }
+}
+
+private extension CGRect {
+    var area: CGFloat { width * height }
 }

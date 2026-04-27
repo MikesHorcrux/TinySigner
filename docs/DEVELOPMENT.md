@@ -13,6 +13,7 @@ flowchart LR
     SigningPDFView --> SigningOverlayView
     InspectorPanelView --> PDFEditorStore
     SigningPDFView --> PDFEditorStore
+    PDFEditorStore --> PDFFieldDetectionService
     PDFEditorStore --> PDFDocumentService
     PDFDocumentService --> SigningFieldRenderer
     SignatureAsset --> SigningFieldRenderer
@@ -20,12 +21,14 @@ flowchart LR
 
 ## Key Components
 
-- `PDFEditorStore`: editor state, selected field, undo/redo, placement defaults, zoom, and export command wiring.
+- `PDFEditorStore`: editor state, selected field, smart suggestions, undo/redo, placement defaults, zoom, and export command wiring.
+- `PDFFieldDetectionService`: local heuristic detector for searchable labels, line geometry, and checkbox outlines.
 - `PDFDocumentService`: PDF open/export, bookmark helpers, demo fixture generation, and flattened PDF rendering.
 - `SigningFieldRenderer`: shared field renderer used by both live preview and exported PDFs.
 - `PDFKitDocumentView`: SwiftUI wrapper around the PDFKit/AppKit editor surface.
 - `SigningOverlayView`: transparent live preview layer. This avoids mutating the PDF document during drag.
-- `InspectorPanelView`: tool picker, signer profile, signature library, and selected field inspector.
+- `InspectorPanelView`: tool picker, smart suggestions, and selected field inspector.
+- `SettingsView`: signer profile, default assets, and reusable signature setup.
 
 ## Coordinate Model
 
@@ -41,6 +44,20 @@ This is important because it keeps field placement stable across:
 ## Live Preview Rendering
 
 Interactive previews should not be PDF annotations. Earlier annotation-based previews caused repeated stamp rendering when dragging. The current design draws fields in `SigningOverlayView`, keeping the document model clean until export.
+
+Smart suggestions also render in `SigningOverlayView`, but remain separate from `PlacedField` until explicitly accepted. This keeps heuristic detection reversible and prevents suggestions from exporting accidentally.
+
+## Smart Detection
+
+Detection is intentionally heuristic and local-only:
+
+1. Extract searchable PDF text labels from each `PDFPage`.
+2. Render each page to a bitmap.
+3. Detect long horizontal line geometry near signature/date/initial labels.
+4. Detect square checkbox outlines from connected dark pixel components.
+5. Mark label-plus-line and checkbox geometry as high confidence; label-only suggestions stay medium confidence.
+
+The app only auto-creates fields when the user accepts high-confidence suggestions. Medium-confidence suggestions require an explicit click.
 
 ## Export Rendering
 
@@ -104,5 +121,6 @@ Documentation graphics live in `docs/images`. SVGs are committed as source so th
 - Do not mutate the source PDF during live editing.
 - Keep placement rectangles in page coordinates.
 - Keep exports flattened and original PDFs unchanged.
+- Keep suggestions separate from real fields until accepted.
 - Keep signature assets local.
 - Use PDFKit/AppKit bridge code only where SwiftUI cannot model the behavior cleanly.

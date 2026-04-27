@@ -26,6 +26,18 @@ Use the **Tools** section in the right inspector:
 
 Click a tool, then click on the PDF. After placing a field, TinySigner returns to Select mode so you can drag or edit that field immediately.
 
+## Smart Suggestions
+
+When a PDF opens, TinySigner scans searchable PDF text and rendered page geometry for likely signing fields:
+
+- Signature and initials labels with nearby lines.
+- Date labels with nearby lines.
+- Checkbox-style square outlines.
+
+Suggestions appear as subtle dashed outlines on the PDF and in **Smart Suggestions** in the inspector. Click an outline to accept one field, or use **Accept High Confidence** to create the obvious fields in one pass. Medium-confidence suggestions stay manual until you click them.
+
+When you select Signature, Date, Initials, or Checkbox and click near a compatible suggestion, TinySigner snaps the new field to that suggestion.
+
 ## Signature Placement
 
 For signature and initials fields, click the signature line itself. TinySigner anchors the signature box so the writing sits on the clicked line instead of centering the entire box around the pointer.
@@ -51,17 +63,19 @@ Changing the source affects only the selected field, so you can use a drawn full
 
 ## Manage Signer Profile
 
-The **Signer** card stores:
+Open **TinySigner > Settings** to manage signer defaults:
 
 - Full name.
 - Initials.
 - Preferred date format.
+- Default signature asset.
+- Default initials asset.
 
 The date preview updates live so you can confirm the format before placing date fields.
 
 ## Signature Library
 
-The **Signature Library** lets you save reusable assets:
+In Settings, **Open Signature Setup** to save reusable assets:
 
 - **Save Typed** creates a signature image from your full name.
 - **Save Initials** creates an initials asset.
@@ -81,16 +95,19 @@ Export behavior:
 - Exported PDF is readable in Preview.
 - Fields are flattened as visible page content.
 - Existing visible PDF content and annotations are preserved by PDFKit rendering.
+- Export completion offers to open the signed PDF, reveal it in Finder, or start another signing flow.
 
 ## Keyboard Shortcuts
 
 - `Command-O`: open PDF.
-- `Command-S`: export signed PDF.
+- `Shift-Command-E`: export signed PDF.
 - `Command-Z`: undo.
 - `Shift-Command-Z`: redo.
 - `Command-+`: zoom in.
 - `Command--`: zoom out.
 - `Command-0`: actual size.
+- `Option-Command-1` through `Option-Command-6`: select editor tools.
+- `Shift-Command-A`: accept high-confidence smart suggestions.
 - `Delete` or `Backspace`: remove selected field.
 
 ## Troubleshooting

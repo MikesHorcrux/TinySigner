@@ -11,9 +11,12 @@ TinySigner v1 creates visual electronic signatures. It does not create cryptogra
 ![TinySigner workflow](docs/images/workflow.svg)
 
 - Opens local PDFs with PDFKit.
+- Detects likely signature, initials, date, and checkbox fields with local PDF heuristics.
+- Shows smart field suggestions as subtle ghost outlines that can be accepted individually or in one high-confidence pass.
 - Lets you place signatures, initials, text, dates, and checkboxes on any page.
 - Supports typed signatures, drawn signatures, imported signature images, and initials.
 - Stores signer profile and reusable signature assets locally with SwiftData.
+- Provides a native Settings window for signer profile, date format, and reusable signature defaults.
 - Provides page thumbnails, zoom controls, selection outlines, drag/resize handles, undo/redo, and keyboard delete.
 - Exports a new flattened `*-signed.pdf` while leaving the original PDF untouched.
 
@@ -26,6 +29,8 @@ When a signature or initials field is selected, use **Signature Source** in the 
 - Typed name or initials from the field value.
 - Saved drawn signature.
 - Imported image signature.
+
+Profile setup and reusable signature creation live in **TinySigner > Settings** so the editor inspector can stay focused on the active document.
 
 ## App Icon
 
@@ -79,15 +84,18 @@ xcodebuild test \
   CODE_SIGNING_ALLOWED=NO
 ```
 
+GitHub Actions runs the app build and unit suite with code signing disabled. UI tests are kept as local smoke tests because macOS runner UI availability can be less predictable.
+
 ## User Flow
 
 1. Open TinySigner.
 2. Click **Open PDF** and choose a local PDF.
 3. Choose a tool in the inspector: Signature, Initials, Text, Date, or Checkbox.
-4. Click the PDF where the field should go. Signature placement is line-aware, so clicking a signature line places the writing on that line.
-5. Drag, resize, or delete the selected field as needed.
-6. Pick a signature source for signature/initial fields.
-7. Export a flattened signed PDF. The original file is not modified.
+4. Review smart suggestions in the PDF overlay or inspector. Click one to accept it, or accept all high-confidence suggestions.
+5. Click the PDF where a remaining field should go. Compatible tools snap to nearby smart suggestions.
+6. Drag, resize, or delete the selected field as needed.
+7. Pick a signature source for signature/initial fields.
+8. Export a flattened signed PDF. The original file is not modified, and TinySigner offers to open the result, reveal it in Finder, or start another signing flow.
 
 See [User Guide](docs/USER_GUIDE.md) for the full walkthrough.
 

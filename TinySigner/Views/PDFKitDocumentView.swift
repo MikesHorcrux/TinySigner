@@ -50,10 +50,19 @@ struct PDFKitDocumentView: NSViewRepresentable {
         nsView.pdfView.onMoveField = { id, rect, pageBounds in
             editor.updateFieldRect(id: id, rect: rect, pageBounds: pageBounds, recordUndo: false)
         }
+        nsView.pdfView.onAcceptSuggestion = { id in
+            editor.acceptSuggestion(
+                id: id,
+                profile: profile,
+                defaultSignatureAssetID: defaultSignatureID,
+                defaultInitialsAssetID: defaultInitialsID
+            )
+        }
 
         nsView.configure(
             document: editor.document,
             fields: editor.fields,
+            fieldSuggestions: editor.fieldSuggestions,
             selectedFieldID: editor.selectedFieldID,
             activeTool: editor.activeTool,
             zoomScale: editor.zoomScale,
@@ -72,6 +81,7 @@ final class PDFKitDocumentContainerView: NSView {
 
     private struct PreviewRenderState: Equatable {
         var fields: [PlacedField]
+        var fieldSuggestions: [DetectedFieldSuggestion]
         var selectedFieldID: UUID?
         var signatureAssetsByID: [UUID: Data]
         var refreshToken: UUID
@@ -90,6 +100,7 @@ final class PDFKitDocumentContainerView: NSView {
     func configure(
         document: PDFDocument?,
         fields: [PlacedField],
+        fieldSuggestions: [DetectedFieldSuggestion],
         selectedFieldID: UUID?,
         activeTool: SigningTool,
         zoomScale: CGFloat,
@@ -112,6 +123,7 @@ final class PDFKitDocumentContainerView: NSView {
 
         pdfView.activeTool = activeTool
         pdfView.fields = fields
+        pdfView.fieldSuggestions = fieldSuggestions
         pdfView.selectedFieldID = selectedFieldID
         pdfView.signatureAssetsByID = signatureAssetsByID
         pdfView.minScaleFactor = 0.35
@@ -123,6 +135,7 @@ final class PDFKitDocumentContainerView: NSView {
 
         let previewRenderState = PreviewRenderState(
             fields: fields,
+            fieldSuggestions: fieldSuggestions,
             selectedFieldID: selectedFieldID,
             signatureAssetsByID: signatureAssetsByID,
             refreshToken: refreshToken

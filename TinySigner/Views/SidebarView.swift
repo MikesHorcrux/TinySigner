@@ -18,6 +18,7 @@ struct SidebarView: View {
                     }
                     Label("\(editor.pageCount) pages", systemImage: "rectangle.stack")
                     Label("\(editor.fields.count) fields", systemImage: "signature")
+                    Label("\(editor.fieldSuggestions.count) suggestions", systemImage: "sparkles")
                     Label("Page \(min(editor.currentPageIndex + 1, max(editor.pageCount, 1)))", systemImage: "number")
                 } else {
                     Label("No PDF open", systemImage: "doc.badge.plus")

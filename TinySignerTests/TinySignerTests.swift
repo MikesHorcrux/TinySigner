@@ -132,6 +132,97 @@ struct SigningModelTests {
 }
 
 @MainActor
+struct SmartFieldDetectionTests {
+    @Test func signatureDateAndCheckboxSuggestionsAreDetectedFromGeneratedPDF() throws {
+        let fixtureURL = try PDFTestFactory.makeSmartFieldsFixturePDF()
+        let document = try #require(PDFDocument(url: fixtureURL))
+
+        let suggestions = PDFFieldDetectionService().detectSuggestions(in: document)
+
+        #expect(suggestions.contains { $0.kind == .signature && $0.confidence == .high })
+        #expect(suggestions.contains { $0.kind == .date && $0.confidence == .high })
+        #expect(suggestions.contains { $0.kind == .checkbox && $0.confidence == .high })
+    }
+
+    @Test func unrelatedTextAndLinesDoNotCreateHighConfidenceSuggestions() throws {
+        let fixtureURL = try PDFTestFactory.makeUnrelatedFixturePDF()
+        let document = try #require(PDFDocument(url: fixtureURL))
+
+        let suggestions = PDFFieldDetectionService().detectSuggestions(in: document)
+
+        #expect(!suggestions.contains { $0.confidence == .high })
+    }
+}
+
+@MainActor
+struct SmartPlacementTests {
+    @Test func acceptingSuggestionCreatesMatchingPlacedField() {
+        let store = PDFEditorStore()
+        let suggestion = DetectedFieldSuggestion(
+            kind: .signature,
+            pageIndex: 0,
+            rectInPageSpace: CGRect(x: 80, y: 180, width: 220, height: 64),
+            sourceLabel: "Signature",
+            confidence: .high
+        )
+        store.fieldSuggestions = [suggestion]
+
+        let accepted = store.acceptSuggestion(id: suggestion.id)
+
+        #expect(accepted)
+        #expect(store.fields.count == 1)
+        #expect(store.fields.first?.kind == .signature)
+        #expect(store.fields.first?.rectInPageSpace == suggestion.rectInPageSpace)
+        #expect(store.fieldSuggestions.isEmpty)
+    }
+
+    @Test func compatiblePlacementNearSuggestionSnapsToSuggestionRect() {
+        let store = PDFEditorStore()
+        let suggestion = DetectedFieldSuggestion(
+            kind: .date,
+            pageIndex: 0,
+            rectInPageSpace: CGRect(x: 340, y: 180, width: 140, height: 32),
+            sourceLabel: "Date",
+            confidence: .high
+        )
+        store.fieldSuggestions = [suggestion]
+
+        store.addField(
+            kind: .date,
+            pageIndex: 0,
+            at: CGPoint(x: suggestion.rectInPageSpace.midX + 6, y: suggestion.rectInPageSpace.midY - 5),
+            pageBounds: CGRect(x: 0, y: 0, width: 612, height: 792),
+            profile: nil,
+            defaultSignatureAssetID: nil,
+            defaultInitialsAssetID: nil
+        )
+
+        #expect(store.fields.first?.rectInPageSpace == suggestion.rectInPageSpace)
+        #expect(store.fieldSuggestions.isEmpty)
+    }
+
+    @Test func undoRedoWorksAfterAcceptingSuggestion() {
+        let store = PDFEditorStore()
+        let suggestion = DetectedFieldSuggestion(
+            kind: .checkbox,
+            pageIndex: 0,
+            rectInPageSpace: CGRect(x: 72, y: 120, width: 24, height: 24),
+            sourceLabel: "checkbox",
+            confidence: .high
+        )
+        store.fieldSuggestions = [suggestion]
+
+        store.acceptSuggestion(id: suggestion.id)
+        store.undo()
+        #expect(store.fields.isEmpty)
+
+        store.redo()
+        #expect(store.fields.count == 1)
+        #expect(store.fields.first?.kind == .checkbox)
+    }
+}
+
+@MainActor
 struct PDFExportTests {
     @Test func exportFlattenedPDFCreatesReadableMultiPageCopy() throws {
         let fixtureURL = try PDFTestFactory.makeFixturePDF(pageCount: 2)
@@ -165,6 +256,50 @@ struct PDFExportTests {
         #expect(fetched.first?.typedText == "Jane Appleseed")
         #expect(fetched.first?.imageData?.isEmpty == false)
     }
+
+    @Test func signerProfileDefaultAssetSelectionsPersist() throws {
+        let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: SignatureAsset.self, SignerProfile.self, RecentDocument.self, configurations: configuration)
+        let context = ModelContext(container)
+        let signature = SignatureAsset(name: "Jane", kind: .typedSignature, typedText: "Jane Appleseed", imageData: SignatureRenderer.renderTextSignature("Jane Appleseed"))
+        let initials = SignatureAsset(name: "JA", kind: .initials, typedText: "JA", imageData: SignatureRenderer.renderTextSignature("JA"))
+        let profile = SignerProfile(fullName: "Jane Appleseed", initials: "JA")
+
+        context.insert(signature)
+        context.insert(initials)
+        context.insert(profile)
+        profile.defaultSignatureAssetID = signature.id
+        profile.defaultInitialsAssetID = initials.id
+        try context.save()
+
+        let fetched = try #require(context.fetch(FetchDescriptor<SignerProfile>()).first)
+        #expect(fetched.defaultSignatureAssetID == signature.id)
+        #expect(fetched.defaultInitialsAssetID == initials.id)
+    }
+
+    @Test func exportIncludesAcceptedSuggestionsAndLeavesOriginalUntouched() throws {
+        let fixtureURL = try PDFTestFactory.makeSmartFieldsFixturePDF()
+        let originalData = try Data(contentsOf: fixtureURL)
+        let outputURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("TinySignerSmartExport-\(UUID().uuidString).pdf")
+        let store = PDFEditorStore()
+        let suggestion = DetectedFieldSuggestion(
+            kind: .text,
+            pageIndex: 0,
+            rectInPageSpace: CGRect(x: 72, y: 610, width: 180, height: 36),
+            sourceLabel: "Text",
+            confidence: .high
+        )
+
+        try store.openPDF(from: fixtureURL)
+        store.fieldSuggestions = [suggestion]
+        store.acceptSuggestion(id: suggestion.id)
+        try store.exportSignedPDF(to: outputURL, signatureAssets: [])
+
+        #expect(try Data(contentsOf: fixtureURL) == originalData)
+        #expect(PDFDocument(url: outputURL)?.pageCount == 1)
+        #expect(store.exportReceipt?.url == outputURL)
+        #expect((try FileManager.default.attributesOfItem(atPath: outputURL.path)[.size] as? NSNumber)?.intValue ?? 0 > 0)
+    }
 }
 
 enum PDFTestFactory {
@@ -196,6 +331,75 @@ enum PDFTestFactory {
 
         context.closePDF()
         return url
+    }
+
+    static func makeSmartFieldsFixturePDF() throws -> URL {
+        try makeFormFixturePDF { context in
+            drawText("11. Signature", in: CGRect(x: 72, y: 218, width: 140, height: 24))
+            drawLine(from: CGPoint(x: 72, y: 210), to: CGPoint(x: 292, y: 210), context: context)
+
+            drawText("Date", in: CGRect(x: 340, y: 218, width: 90, height: 24))
+            drawLine(from: CGPoint(x: 340, y: 210), to: CGPoint(x: 480, y: 210), context: context)
+
+            drawCheckbox(in: CGRect(x: 72, y: 150, width: 18, height: 18), context: context)
+            drawText("I agree to the local signing terms.", in: CGRect(x: 100, y: 146, width: 300, height: 24))
+        }
+    }
+
+    static func makeUnrelatedFixturePDF() throws -> URL {
+        try makeFormFixturePDF { context in
+            drawText("Fixture page with ordinary content", in: CGRect(x: 72, y: 700, width: 360, height: 30))
+            drawLine(from: CGPoint(x: 72, y: 620), to: CGPoint(x: 292, y: 620), context: context)
+        }
+    }
+
+    private static func makeFormFixturePDF(draw: (CGContext) -> Void) throws -> URL {
+        let url = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("TinySignerSmartFixture-\(UUID().uuidString).pdf")
+        var mediaBox = CGRect(x: 0, y: 0, width: 612, height: 792)
+        guard let context = CGContext(url as CFURL, mediaBox: &mediaBox, nil) else {
+            throw NSError(domain: "TinySignerTests", code: 2)
+        }
+
+        context.beginPDFPage(nil)
+        NSGraphicsContext.saveGraphicsState()
+        let previous = NSGraphicsContext.current
+        NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: false)
+        drawText("TinySigner Smart Fixture", in: CGRect(x: 72, y: 700, width: 420, height: 36))
+        draw(context)
+        NSGraphicsContext.current = previous
+        NSGraphicsContext.restoreGraphicsState()
+        context.endPDFPage()
+        context.closePDF()
+        return url
+    }
+
+    private static func drawText(_ text: String, in rect: CGRect) {
+        let attributed = NSAttributedString(
+            string: text,
+            attributes: [
+                .font: NSFont.systemFont(ofSize: 14, weight: .regular),
+                .foregroundColor: NSColor.black
+            ]
+        )
+        attributed.draw(in: rect)
+    }
+
+    private static func drawLine(from start: CGPoint, to end: CGPoint, context: CGContext) {
+        context.saveGState()
+        context.setStrokeColor(NSColor.black.cgColor)
+        context.setLineWidth(1.2)
+        context.move(to: start)
+        context.addLine(to: end)
+        context.strokePath()
+        context.restoreGState()
+    }
+
+    private static func drawCheckbox(in rect: CGRect, context: CGContext) {
+        context.saveGState()
+        context.setStrokeColor(NSColor.black.cgColor)
+        context.setLineWidth(1.4)
+        context.stroke(rect)
+        context.restoreGState()
     }
 }
 

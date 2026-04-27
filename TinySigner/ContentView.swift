@@ -57,6 +57,20 @@ struct ContentView: View {
                 .keyboardShortcut("z", modifiers: [.command, .shift])
             }
         }
+        .focusedValue(\.tinySignerEditorActions, editorActions)
+        .sheet(item: $editor.exportReceipt) { receipt in
+            ExportSuccessView(
+                url: receipt.url,
+                openSignedPDF: { NSWorkspace.shared.open(receipt.url) },
+                revealInFinder: { NSWorkspace.shared.activateFileViewerSelecting([receipt.url]) },
+                signAnother: {
+                    editor.exportReceipt = nil
+                    DispatchQueue.main.async {
+                        openPDF()
+                    }
+                }
+            )
+        }
         .alert("TinySigner", isPresented: Binding(
             get: { editor.lastError != nil },
             set: { isPresented in if !isPresented { editor.lastError = nil } }
@@ -81,6 +95,41 @@ struct ContentView: View {
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
         openURL(url, storeRecentDocument: true)
+    }
+
+    private var editorActions: TinySignerEditorActions {
+        TinySignerEditorActions(
+            openPDF: openPDF,
+            exportSignedPDF: exportSignedPDF,
+            undo: editor.undo,
+            redo: editor.redo,
+            deleteField: editor.deleteSelectedField,
+            zoomIn: editor.zoomIn,
+            zoomOut: editor.zoomOut,
+            resetZoom: editor.resetZoom,
+            acceptHighConfidenceSuggestions: {
+                editor.acceptHighConfidenceSuggestions(
+                    profile: activeProfile,
+                    defaultSignatureAssetID: defaultSignatureID,
+                    defaultInitialsAssetID: defaultInitialsID
+                )
+            },
+            setTool: { tool in editor.activeTool = tool },
+            canExport: editor.hasDocument,
+            canUndo: editor.canUndo,
+            canRedo: editor.canRedo,
+            canDelete: editor.selectedFieldID != nil,
+            canAcceptSuggestions: editor.fieldSuggestions.contains { $0.confidence == .high },
+            activeTool: editor.activeTool
+        )
+    }
+
+    private var defaultSignatureID: UUID? {
+        activeProfile?.defaultSignatureAssetID ?? signatureAssets.first(where: { $0.kind != .initials })?.id
+    }
+
+    private var defaultInitialsID: UUID? {
+        activeProfile?.defaultInitialsAssetID ?? signatureAssets.first(where: { $0.kind == .initials })?.id
     }
 
     private func openRecent(_ recent: RecentDocument) {

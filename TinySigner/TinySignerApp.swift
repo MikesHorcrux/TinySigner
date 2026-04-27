@@ -10,15 +10,11 @@ struct TinySignerApp: App {
 
     var body: some Scene {
         Settings {
-            EmptyView()
+            SettingsView()
+                .modelContainer(appState.modelContainer)
         }
         .commands {
-            CommandGroup(replacing: .newItem) {
-                Button("New Window") {
-                    appState.showMainWindow()
-                }
-                .keyboardShortcut("n", modifiers: .command)
-            }
+            TinySignerCommands()
         }
     }
 }

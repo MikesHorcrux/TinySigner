@@ -15,10 +15,13 @@ final class PDFEditorStore: ObservableObject {
     @Published var statusMessage: String = "Open a PDF to begin."
     @Published var lastError: String?
     @Published var refreshToken = UUID()
+    @Published var fieldSuggestions: [DetectedFieldSuggestion] = []
+    @Published var exportReceipt: ExportReceipt?
     @Published private(set) var canUndo = false
     @Published private(set) var canRedo = false
 
     let service = PDFDocumentService()
+    private let detectionService = PDFFieldDetectionService()
     private var undoStack: [[PlacedField]] = []
     private var redoStack: [[PlacedField]] = []
     private var dragSnapshot: [PlacedField]?
@@ -46,6 +49,7 @@ final class PDFEditorStore: ObservableObject {
         document = opened
         documentURL = sourceURL
         fields = []
+        fieldSuggestions = detectionService.detectSuggestions(in: opened)
         selectedFieldID = nil
         activeTool = .select
         currentPageIndex = 0
@@ -53,24 +57,93 @@ final class PDFEditorStore: ObservableObject {
         redoStack.removeAll()
         updateUndoState()
         refreshToken = UUID()
-        statusMessage = "Opened \(statusName). Add a signature, date, text, or checkbox."
+        statusMessage = openStatusMessage(for: statusName, suggestionCount: fieldSuggestions.count)
     }
 
     func addField(kind: PlacedField.Kind, pageIndex: Int, at point: CGPoint, pageBounds: CGRect, profile: SignerProfile?, defaultSignatureAssetID: UUID?, defaultInitialsAssetID: UUID?) {
-        let size = kind.defaultSize
-        let rect = defaultRect(for: kind, at: point, size: size, pageBounds: pageBounds)
-        let field = PlacedField(
+        let snappedSuggestion = nearestSuggestion(kind: kind, pageIndex: pageIndex, point: point)
+        let rect = snappedSuggestion?.rectInPageSpace ?? defaultRect(for: kind, at: point, size: kind.defaultSize, pageBounds: pageBounds)
+        let field = makeField(
             kind: kind,
             pageIndex: pageIndex,
-            rectInPageSpace: rect,
-            text: defaultText(for: kind, profile: profile),
-            style: defaultStyle(for: kind),
-            signatureAssetID: assetID(for: kind, signatureID: defaultSignatureAssetID, initialsID: defaultInitialsAssetID)
+            rect: rect,
+            profile: profile,
+            defaultSignatureAssetID: defaultSignatureAssetID,
+            defaultInitialsAssetID: defaultInitialsAssetID
         )
+
+        if let snappedSuggestion {
+            fieldSuggestions.removeAll { $0.id == snappedSuggestion.id }
+        }
         applyFields(fields + [field], recordUndo: true)
         selectedFieldID = field.id
         activeTool = .select
-        statusMessage = "Placed \(kind.title.lowercased()) on page \(pageIndex + 1)."
+        statusMessage = snappedSuggestion == nil
+            ? "Placed \(kind.title.lowercased()) on page \(pageIndex + 1)."
+            : "Placed \(kind.title.lowercased()) from smart suggestion on page \(pageIndex + 1)."
+    }
+
+    @discardableResult
+    func acceptSuggestion(id: UUID, profile: SignerProfile? = nil, defaultSignatureAssetID: UUID? = nil, defaultInitialsAssetID: UUID? = nil) -> Bool {
+        guard let suggestion = fieldSuggestions.first(where: { $0.id == id }) else { return false }
+        let field = makeField(
+            kind: suggestion.kind,
+            pageIndex: suggestion.pageIndex,
+            rect: suggestion.rectInPageSpace,
+            profile: profile,
+            defaultSignatureAssetID: defaultSignatureAssetID,
+            defaultInitialsAssetID: defaultInitialsAssetID
+        )
+        fieldSuggestions.removeAll { $0.id == id }
+        applyFields(fields + [field], recordUndo: true)
+        selectedFieldID = field.id
+        activeTool = .select
+        statusMessage = "Accepted \(suggestion.kind.title.lowercased()) suggestion on page \(suggestion.pageIndex + 1)."
+        return true
+    }
+
+    @discardableResult
+    func acceptHighConfidenceSuggestions(profile: SignerProfile? = nil, defaultSignatureAssetID: UUID? = nil, defaultInitialsAssetID: UUID? = nil) -> Int {
+        let acceptedSuggestions = fieldSuggestions.filter { $0.confidence == .high }
+        guard !acceptedSuggestions.isEmpty else {
+            statusMessage = "No high-confidence smart suggestions to accept."
+            return 0
+        }
+
+        let acceptedIDs = Set(acceptedSuggestions.map(\.id))
+        let acceptedFields = acceptedSuggestions.map { suggestion in
+            makeField(
+                kind: suggestion.kind,
+                pageIndex: suggestion.pageIndex,
+                rect: suggestion.rectInPageSpace,
+                profile: profile,
+                defaultSignatureAssetID: defaultSignatureAssetID,
+                defaultInitialsAssetID: defaultInitialsAssetID
+            )
+        }
+
+        fieldSuggestions.removeAll { acceptedIDs.contains($0.id) }
+        applyFields(fields + acceptedFields, recordUndo: true)
+        selectedFieldID = acceptedFields.last?.id
+        activeTool = .select
+        statusMessage = "Accepted \(acceptedFields.count) high-confidence smart suggestions."
+        return acceptedFields.count
+    }
+
+    func nearestSuggestion(kind: PlacedField.Kind, pageIndex: Int, point: CGPoint) -> DetectedFieldSuggestion? {
+        let compatibleSuggestions = fieldSuggestions.filter {
+            $0.kind == kind && $0.pageIndex == pageIndex
+        }
+        guard !compatibleSuggestions.isEmpty else { return nil }
+
+        let threshold: CGFloat = kind == .checkbox ? 18 : 44
+        return compatibleSuggestions
+            .map { suggestion in
+                (suggestion, suggestion.rectInPageSpace.center.distance(to: point))
+            }
+            .filter { _, distance in distance <= threshold }
+            .min { lhs, rhs in lhs.1 < rhs.1 }?
+            .0
     }
 
     private func defaultRect(for kind: PlacedField.Kind, at point: CGPoint, size: CGSize, pageBounds: CGRect) -> CGRect {
@@ -191,6 +264,7 @@ final class PDFEditorStore: ObservableObject {
             return (asset.id, imageData)
         })
         try service.exportFlattenedPDF(document: document, fields: fields, signatureAssetsByID: assets, to: outputURL)
+        exportReceipt = ExportReceipt(url: outputURL)
         refreshToken = UUID()
         statusMessage = "Exported signed PDF to \(outputURL.lastPathComponent)."
     }
@@ -207,6 +281,26 @@ final class PDFEditorStore: ObservableObject {
         fields = newFields
         refreshToken = UUID()
         updateUndoState()
+    }
+
+    private func makeField(kind: PlacedField.Kind, pageIndex: Int, rect: CGRect, profile: SignerProfile?, defaultSignatureAssetID: UUID?, defaultInitialsAssetID: UUID?) -> PlacedField {
+        PlacedField(
+            kind: kind,
+            pageIndex: pageIndex,
+            rectInPageSpace: rect,
+            text: defaultText(for: kind, profile: profile),
+            style: defaultStyle(for: kind),
+            signatureAssetID: assetID(for: kind, signatureID: defaultSignatureAssetID, initialsID: defaultInitialsAssetID)
+        )
+    }
+
+    private func openStatusMessage(for statusName: String, suggestionCount: Int) -> String {
+        if suggestionCount == 0 {
+            return "Opened \(statusName). Add a signature, date, text, or checkbox."
+        }
+
+        let noun = suggestionCount == 1 ? "smart field" : "smart fields"
+        return "Opened \(statusName). Found \(suggestionCount) likely \(noun) to review."
     }
 
     private func updateUndoState() {
