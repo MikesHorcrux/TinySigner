@@ -1,5 +1,27 @@
 # Contributing
 
-TinySigner is public source-visible software, not an open source project.
+TinySigner is open source under the MIT License.
 
-Public issues, pull requests, forks, redistribution, and derivative works are not accepted unless there is a prior written agreement with the copyright holder. If you have feedback, contact the repository owner directly.
+Issues and pull requests are welcome. For a smooth review:
+
+- Keep changes focused and explain the user-facing behavior they affect.
+- Run the relevant build or test command before opening a pull request.
+- Do not include real signatures, private PDFs, secrets, or customer documents in issues, tests, screenshots, or fixtures.
+- Preserve the local-first privacy model unless the change explicitly proposes a new networked feature.
+
+Useful checks:
+
+```bash
+xcodebuild build \
+  -project TinySigner.xcodeproj \
+  -scheme TinySigner \
+  -destination 'platform=macOS' \
+  CODE_SIGNING_ALLOWED=NO
+
+xcodebuild test \
+  -project TinySigner.xcodeproj \
+  -scheme TinySigner \
+  -destination 'platform=macOS' \
+  -only-testing:TinySignerTests \
+  CODE_SIGNING_ALLOWED=NO
+```

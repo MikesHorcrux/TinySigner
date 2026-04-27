@@ -26,6 +26,8 @@ struct TinySignerApp: App {
 @MainActor
 final class TinySignerAppState {
     static let shared = TinySignerAppState()
+    static let minimumMainWindowSize = NSSize(width: 1120, height: 720)
+    static let defaultMainWindowSize = NSSize(width: 1240, height: 820)
 
     let modelContainer: ModelContainer
     private var mainWindowController: NSWindowController?
@@ -42,17 +44,20 @@ final class TinySignerAppState {
         }
 
         let rootView = ContentView()
-            .frame(minWidth: 980, minHeight: 680)
+            .frame(minWidth: Self.minimumMainWindowSize.width, minHeight: Self.minimumMainWindowSize.height)
             .modelContainer(modelContainer)
         let hostingController = NSHostingController(rootView: rootView)
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 1180, height: 760),
+            contentRect: NSRect(origin: .zero, size: Self.defaultMainWindowSize),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
         window.title = "TinySigner"
         window.identifier = NSUserInterfaceItemIdentifier("main")
+        window.minSize = Self.minimumMainWindowSize
+        window.toolbarStyle = .unified
+        window.titlebarSeparatorStyle = .line
         window.isReleasedWhenClosed = false
         window.contentViewController = hostingController
         window.setFrameAutosaveName("TinySignerMainWindow")

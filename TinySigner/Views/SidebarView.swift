@@ -9,8 +9,13 @@ struct SidebarView: View {
         List {
             Section("Document") {
                 if let documentURL = editor.documentURL {
-                    Label(documentURL.lastPathComponent, systemImage: "doc.richtext")
-                        .lineLimit(2)
+                    Label {
+                        Text(documentURL.lastPathComponent)
+                            .lineLimit(2)
+                    } icon: {
+                        Image(systemName: "doc.richtext")
+                            .symbolRenderingMode(.hierarchical)
+                    }
                     Label("\(editor.pageCount) pages", systemImage: "rectangle.stack")
                     Label("\(editor.fields.count) fields", systemImage: "signature")
                     Label("Page \(min(editor.currentPageIndex + 1, max(editor.pageCount, 1)))", systemImage: "number")
@@ -26,7 +31,7 @@ struct SidebarView: View {
                         Button {
                             editor.selectedFieldID = field.id
                         } label: {
-                            HStack(spacing: 8) {
+                            HStack(spacing: 10) {
                                 Image(systemName: icon(for: field.kind))
                                     .frame(width: 16)
                                     .foregroundStyle(.secondary)
@@ -38,6 +43,10 @@ struct SidebarView: View {
                                 }
                                 Spacer()
                             }
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 6)
+                            .background(field.id == editor.selectedFieldID ? Color.accentColor.opacity(0.16) : Color.clear, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                         }
                         .buttonStyle(.plain)
                         .tag(field.id)
@@ -55,7 +64,7 @@ struct SidebarView: View {
                         Button {
                             openRecent(recent)
                         } label: {
-                            HStack(spacing: 8) {
+                            HStack(spacing: 10) {
                                 Image(systemName: "clock.arrow.circlepath")
                                     .foregroundStyle(.secondary)
                                     .frame(width: 16)
@@ -67,6 +76,7 @@ struct SidebarView: View {
                                         .foregroundStyle(.secondary)
                                 }
                             }
+                            .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                     }

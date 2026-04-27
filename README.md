@@ -120,6 +120,8 @@ script/
 - [Privacy And Signature Scope](docs/PRIVACY.md)
 - [Release Checklist](docs/RELEASE_CHECKLIST.md)
 - [Changelog](CHANGELOG.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security](SECURITY.md)
 
 ## Current Scope
 
@@ -127,4 +129,4 @@ TinySigner v1 is intentionally local and simple. It is a strong fit for signing 
 
 ## License / Use
 
-TinySigner is public source-visible software, but it is **not open source**. All rights are reserved by Mike Van Amburg. See [LICENSE.md](LICENSE.md).
+TinySigner is open source software released under the MIT License. See [LICENSE.md](LICENSE.md).

@@ -34,42 +34,35 @@ struct InspectorPanelView: View {
             .padding(18)
         }
         .frame(minWidth: 290, idealWidth: 320, maxWidth: 380)
-        .background(.thinMaterial)
+        .background(.bar)
     }
 
     private var toolSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Tools")
-                .font(.headline)
-                .accessibilityIdentifier("toolsInspectorTitle")
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                ForEach(SigningTool.allCases) { tool in
-                    Button {
-                        editor.activeTool = tool
-                    } label: {
-                        Label(tool.title, systemImage: tool.systemImage)
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .tint(editor.activeTool == tool ? .accentColor : nil)
-                }
-            }
-            Text("Click a tool, then click the PDF. Drag placed fields to reposition; movement snaps to a 2 point grid.")
+        InspectorSection("Tools", systemImage: "wand.and.sparkles") {
+            Text("Choose a tool, then click the PDF. Existing fields can be selected, moved, resized, or deleted.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .accessibilityIdentifier("toolsInspectorTitle")
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                ForEach(SigningTool.allCases) { tool in
+                    SigningToolButton(tool: tool, isSelected: editor.activeTool == tool) {
+                        editor.activeTool = tool
+                    }
+                }
+            }
         }
     }
 
     @ViewBuilder
     private var selectedFieldSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Selected Field")
-                .font(.headline)
-
+        InspectorSection("Selected Field", systemImage: "slider.horizontal.3") {
             if let field = editor.selectedField {
-                LabeledContent("Type", value: field.kind.title)
-                LabeledContent("Page", value: "\(field.pageIndex + 1)")
+                VStack(spacing: 8) {
+                    LabeledContent("Type", value: field.kind.title)
+                    LabeledContent("Page", value: "\(field.pageIndex + 1)")
+                }
+                .font(.callout)
 
                 if field.kind != .checkbox {
                     TextField("Value", text: Binding(
@@ -127,10 +120,14 @@ struct InspectorPanelView: View {
                     }
                     .disabled(field.kind != .date)
                 }
+                .controlSize(.small)
             } else {
-                Text("Select a field on the PDF to edit its text, size, or signature asset.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                ContentUnavailableView(
+                    "No Field Selected",
+                    systemImage: "selection.pin.in.out",
+                    description: Text("Select a field on the PDF to edit its value, size, or signature source.")
+                )
+                .controlSize(.small)
             }
         }
     }
@@ -248,5 +245,38 @@ struct InspectorPanelView: View {
         } catch {
             editor.lastError = "TinySigner could not save the signature library: \(error.localizedDescription)"
         }
+    }
+}
+
+private struct SigningToolButton: View {
+    var tool: SigningTool
+    var isSelected: Bool
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                Image(systemName: tool.systemImage)
+                    .font(.system(size: 16, weight: .semibold))
+                    .symbolRenderingMode(.hierarchical)
+                Text(tool.title)
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
+        .background(selectionBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(isSelected ? Color.accentColor.opacity(0.75) : Color(nsColor: .separatorColor).opacity(0.55), lineWidth: 1)
+        }
+        .help(tool.title)
+    }
+
+    private var selectionBackground: some ShapeStyle {
+        isSelected ? Color.accentColor.opacity(0.16) : Color(nsColor: .controlBackgroundColor).opacity(0.36)
     }
 }

@@ -12,11 +12,22 @@ struct EditorWorkspaceView: View {
 
             Divider()
 
-            HStack(spacing: 12) {
-                Label(editor.statusMessage, systemImage: "info.circle")
-                    .lineLimit(1)
-                    .foregroundStyle(.secondary)
-                Spacer()
+            footerBar
+        }
+        .background(.background)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("editorWorkspace")
+    }
+
+    private var footerBar: some View {
+        HStack(spacing: 12) {
+            Label(editor.statusMessage, systemImage: editor.hasDocument ? "doc.viewfinder" : "info.circle")
+                .lineLimit(1)
+                .foregroundStyle(.secondary)
+
+            Spacer()
+
+            HStack(spacing: 8) {
                 Button {
                     editor.zoomOut()
                 } label: {
@@ -36,16 +47,21 @@ struct EditorWorkspaceView: View {
                 }
                 .help("Zoom in")
 
+                Divider()
+                    .frame(height: 16)
+
                 Button("Actual Size") {
                     editor.resetZoom()
                 }
             }
-            .buttonStyle(.borderless)
-            .font(.callout)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(.regularMaterial, in: Capsule())
         }
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("editorWorkspace")
+        .buttonStyle(.borderless)
+        .font(.callout)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
+        .background(.bar)
     }
 }

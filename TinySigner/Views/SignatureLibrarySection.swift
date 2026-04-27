@@ -6,9 +6,7 @@ struct SignerProfileCard: View {
     @Bindable var profile: SignerProfile
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Signer")
-                .font(.headline)
+        InspectorSection("Signer", systemImage: "person.text.rectangle") {
             TextField("Full name", text: $profile.fullName)
                 .textFieldStyle(.roundedBorder)
             TextField("Initials", text: $profile.initials)
@@ -33,18 +31,17 @@ struct SignatureLibrarySection: View {
     var deleteAsset: (SignatureAsset, SignerProfile) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Signature Library")
-                .font(.headline)
-
+        InspectorSection("Signature Library", systemImage: "signature") {
             HStack {
                 Button("Save Typed") { saveTypedSignature() }
                 Button("Save Initials") { saveTypedInitials() }
             }
+            .controlSize(.small)
             HStack {
                 Button("Import Image") { importSignatureImage() }
                 Button("Save Drawing") { saveDrawnSignature() }
             }
+            .controlSize(.small)
 
             SignatureDrawingCanvas(strokes: $drawingStrokes)
                 .frame(height: 118)
@@ -64,6 +61,7 @@ struct SignatureLibrarySection: View {
                 drawingStrokes = []
             }
             .buttonStyle(.link)
+            .controlSize(.small)
 
             if signatureAssets.isEmpty {
                 Text("Save or import a signature to reuse it on future PDFs.")

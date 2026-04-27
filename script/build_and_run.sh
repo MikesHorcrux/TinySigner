@@ -8,6 +8,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DERIVED_DATA="$ROOT_DIR/build/DerivedData"
 APP_BUNDLE="$DERIVED_DATA/Build/Products/Debug/$APP_NAME.app"
 APP_BINARY="$APP_BUNDLE/Contents/MacOS/$APP_NAME"
+CODE_SIGNING_ALLOWED_VALUE="${CODE_SIGNING_ALLOWED:-NO}"
 
 pkill -x "$APP_NAME" >/dev/null 2>&1 || true
 
@@ -17,6 +18,7 @@ xcodebuild \
   -configuration Debug \
   -destination 'platform=macOS' \
   -derivedDataPath "$DERIVED_DATA" \
+  CODE_SIGNING_ALLOWED="$CODE_SIGNING_ALLOWED_VALUE" \
   build
 
 open_app() {
