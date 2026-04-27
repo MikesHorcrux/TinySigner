@@ -1,18 +1,13 @@
-//
-//  TinySignerApp.swift
-//  TinySigner
-//
-//  Created by Mike  Van Amburg on 4/27/26.
-//
-
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 @main
 struct TinySignerApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            SignatureAsset.self,
+            SignerProfile.self,
+            RecentDocument.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -26,7 +21,11 @@ struct TinySignerApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .frame(minWidth: 980, minHeight: 680)
         }
         .modelContainer(sharedModelContainer)
+        .commands {
+            CommandGroup(replacing: .newItem) { }
+        }
     }
 }
