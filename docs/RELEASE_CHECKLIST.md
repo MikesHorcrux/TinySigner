@@ -63,6 +63,23 @@ python3 script/generate_app_icon.py
 - Confirm user-selected read/write file access is enabled.
 - Confirm security-scoped bookmarks survive relaunch for recent PDFs.
 
+## Packaging
+
+- Build the release DMG:
+
+```bash
+./script/build_release_dmg.sh
+```
+
+- For public distribution, notarize and staple the DMG before attaching it to a GitHub release:
+
+```bash
+NOTARYTOOL_PROFILE="TinySigner" ./script/build_release_dmg.sh --notarize
+```
+
+- Confirm `build/release/validation.log` shows a Developer ID signed app and DMG.
+- Confirm `xcrun stapler validate build/release/TinySigner-1.0.dmg` succeeds before calling the release final.
+
 ## Docs
 
 - Update `README.md` if feature scope changed.
