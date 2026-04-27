@@ -4,40 +4,51 @@ import PDFKit
 
 struct SigningFieldRenderer {
     static func draw(field: PlacedField, in context: CGContext, assetImageData: Data?, selected: Bool = false) {
-        let rect = field.rectInPageSpace
-        context.saveGState()
+        draw(field: field, rect: field.rectInPageSpace, in: context, assetImageData: assetImageData, selected: selected)
+    }
 
-        if selected {
-            drawSelection(for: rect, in: context)
-        }
+    static func draw(field: PlacedField, rect: CGRect, in context: CGContext, assetImageData: Data?, selected: Bool = false) {
+        context.saveGState()
 
         switch field.kind {
         case .checkbox:
-            drawCheckbox(field: field, in: context)
+            drawCheckbox(field: field, rect: rect, in: context)
         case .signature, .initials:
             if let assetImageData, drawImage(assetImageData, in: rect, context: context) {
                 break
             }
-            drawText(field.text.isEmpty ? field.kind.title : field.text, field: field, in: context, signatureStyle: true)
+            drawText(field.text.isEmpty ? field.kind.title : field.text, rect: rect, field: field, in: context, signatureStyle: true)
         case .text, .date:
-            drawText(field.text, field: field, in: context, signatureStyle: false)
+            drawText(field.text, rect: rect, field: field, in: context, signatureStyle: false)
+        }
+
+        if selected {
+            drawSelection(for: rect, in: context)
         }
 
         context.restoreGState()
     }
 
     private static func drawSelection(for rect: CGRect, in context: CGContext) {
-        context.setFillColor(NSColor.controlAccentColor.withAlphaComponent(0.12).cgColor)
-        context.fill(rect)
+        context.saveGState()
+        context.clip(to: rect.insetBy(dx: -8, dy: -8))
         context.setStrokeColor(NSColor.controlAccentColor.cgColor)
-        context.setLineWidth(1)
+        context.setLineWidth(1.25)
         context.setLineDash(phase: 0, lengths: [5, 3])
         context.stroke(rect.insetBy(dx: 0.5, dy: 0.5))
         context.setLineDash(phase: 0, lengths: [])
+
+        let handleRect = resizeHandleRect(for: rect)
+        context.setFillColor(NSColor.controlAccentColor.cgColor)
+        context.fill(handleRect)
+        context.setStrokeColor(NSColor.white.withAlphaComponent(0.95).cgColor)
+        context.setLineWidth(1)
+        context.stroke(handleRect.insetBy(dx: 0.5, dy: 0.5))
+        context.restoreGState()
     }
 
-    private static func drawCheckbox(field: PlacedField, in context: CGContext) {
-        let rect = field.rectInPageSpace.insetBy(dx: 2, dy: 2)
+    private static func drawCheckbox(field: PlacedField, rect: CGRect, in context: CGContext) {
+        let rect = rect.insetBy(dx: 2, dy: 2)
         context.setStrokeColor(field.style.cgColor)
         context.setLineWidth(field.style.lineWidth)
         context.stroke(rect)
@@ -54,20 +65,36 @@ struct SigningFieldRenderer {
 
     @discardableResult
     private static func drawImage(_ data: Data, in rect: CGRect, context: CGContext) -> Bool {
-        guard let image = NSImage(data: data), let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+        guard let image = NSImage(data: data), image.size.width > 0, image.size.height > 0 else {
             return false
         }
 
         context.saveGState()
-        context.interpolationQuality = .high
-        context.draw(cgImage, in: rect)
+        NSGraphicsContext.saveGraphicsState()
+        let previous = NSGraphicsContext.current
+        let graphicsContext = NSGraphicsContext(cgContext: context, flipped: false)
+        graphicsContext.imageInterpolation = .high
+        NSGraphicsContext.current = graphicsContext
+
+        let drawRect = aspectFitRect(for: image.size, in: rect.insetBy(dx: 2, dy: 2))
+        image.draw(
+            in: drawRect,
+            from: NSRect(origin: .zero, size: image.size),
+            operation: .sourceOver,
+            fraction: 1,
+            respectFlipped: false,
+            hints: [.interpolation: NSImageInterpolation.high]
+        )
+
+        NSGraphicsContext.current = previous
+        NSGraphicsContext.restoreGraphicsState()
         context.restoreGState()
         return true
     }
 
-    private static func drawText(_ text: String, field: PlacedField, in context: CGContext, signatureStyle: Bool) {
-        let rect = field.rectInPageSpace.insetBy(dx: 5, dy: 3)
-        let font = font(for: field, signatureStyle: signatureStyle)
+    private static func drawText(_ text: String, rect: CGRect, field: PlacedField, in context: CGContext, signatureStyle: Bool) {
+        let rect = rect.insetBy(dx: 5, dy: 3)
+        let font = font(for: field, rect: rect, signatureStyle: signatureStyle)
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = signatureStyle ? .center : .left
         paragraph.lineBreakMode = .byTruncatingTail
@@ -99,12 +126,32 @@ struct SigningFieldRenderer {
         NSGraphicsContext.restoreGraphicsState()
     }
 
-    private static func font(for field: PlacedField, signatureStyle: Bool) -> NSFont {
-        let maxSize = max(10, min(field.style.fontSize, field.rectInPageSpace.height * 0.78))
+    private static func font(for field: PlacedField, rect: CGRect, signatureStyle: Bool) -> NSFont {
+        let maxSize = max(10, min(field.style.fontSize, rect.height * 0.78))
         if signatureStyle {
             return NSFont(name: "Snell Roundhand", size: maxSize) ?? NSFont.systemFont(ofSize: maxSize, weight: .regular)
         }
         return NSFont.systemFont(ofSize: maxSize, weight: .regular)
+    }
+
+    static func resizeHandleRect(for rect: CGRect) -> CGRect {
+        let size: CGFloat = 9
+        return CGRect(x: rect.maxX - size, y: rect.minY, width: size, height: size)
+    }
+
+    private static func aspectFitRect(for imageSize: CGSize, in rect: CGRect) -> CGRect {
+        guard imageSize.width > 0, imageSize.height > 0, rect.width > 0, rect.height > 0 else {
+            return rect
+        }
+
+        let scale = min(rect.width / imageSize.width, rect.height / imageSize.height)
+        let size = CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
+        return CGRect(
+            x: rect.midX - size.width / 2,
+            y: rect.midY - size.height / 2,
+            width: size.width,
+            height: size.height
+        )
     }
 }
 

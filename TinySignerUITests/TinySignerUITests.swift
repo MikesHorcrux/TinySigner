@@ -8,10 +8,15 @@ final class TinySignerUITests: XCTestCase {
     @MainActor
     func testLaunchShowsWelcomeScreen() throws {
         let app = XCUIApplication()
+        app.launchArguments = ["--uitest", "--uitest-empty"]
+        app.launchEnvironment = [
+            "TINYSIGNER_UI_TEST": "1",
+            "TINYSIGNER_UI_TEST_EMPTY": "1"
+        ]
         app.launch()
 
-        XCTAssertTrue(app.staticTexts["TinySigner"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["Open PDF"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["welcomeTitle"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["welcomeOpenPDFButton"].exists)
     }
 
     @MainActor

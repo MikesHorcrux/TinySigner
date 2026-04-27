@@ -30,6 +30,16 @@ struct PlacedField: Identifiable, Codable, Equatable {
             case .checkbox: CGSize(width: 24, height: 24)
             }
         }
+
+        var minimumSize: CGSize {
+            switch self {
+            case .signature: CGSize(width: 96, height: 32)
+            case .initials: CGSize(width: 42, height: 24)
+            case .text: CGSize(width: 52, height: 24)
+            case .date: CGSize(width: 74, height: 24)
+            case .checkbox: CGSize(width: 18, height: 18)
+            }
+        }
     }
 
     var id: UUID
@@ -98,5 +108,13 @@ extension CGRect {
         guard grid > 0 else { return self }
         func snap(_ value: CGFloat) -> CGFloat { (value / grid).rounded() * grid }
         return CGRect(x: snap(minX), y: snap(minY), width: snap(width), height: snap(height))
+    }
+
+    func resizedFromBottomRight(to point: CGPoint, minimumSize: CGSize, clampedTo bounds: CGRect) -> CGRect {
+        let maxWidth = max(minimumSize.width, bounds.maxX - minX)
+        let maxHeight = max(minimumSize.height, maxY - bounds.minY)
+        let width = min(max(point.x - minX, minimumSize.width), maxWidth)
+        let height = min(max(maxY - point.y, minimumSize.height), maxHeight)
+        return CGRect(x: minX, y: maxY - height, width: width, height: height).clamped(to: bounds)
     }
 }

@@ -15,6 +15,7 @@ struct WelcomeView: View {
                     .symbolRenderingMode(.hierarchical)
                 Text("TinySigner")
                     .font(.largeTitle.weight(.semibold))
+                    .accessibilityIdentifier("welcomeTitle")
                 Text("Open a PDF, place signatures and form fields, then export a flattened signed copy.")
                     .font(.title3)
                     .foregroundStyle(.secondary)
@@ -29,6 +30,7 @@ struct WelcomeView: View {
                     .padding(.vertical, 8)
             }
             .buttonStyle(.borderedProminent)
+            .accessibilityIdentifier("welcomeOpenPDFButton")
             .keyboardShortcut("o", modifiers: .command)
 
             if !recentDocuments.isEmpty {

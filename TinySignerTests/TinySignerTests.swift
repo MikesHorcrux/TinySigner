@@ -1,3 +1,4 @@
+import AppKit
 import CoreGraphics
 import Foundation
 import PDFKit
@@ -5,6 +6,7 @@ import SwiftData
 import Testing
 @testable import TinySigner
 
+@MainActor
 struct SigningModelTests {
     @Test func placedFieldCodableRoundTripPreservesPageRectAndKind() throws {
         let field = PlacedField(
@@ -36,6 +38,96 @@ struct SigningModelTests {
         let proposed = CGRect(x: 260, y: 385, width: 80, height: 50)
 
         #expect(proposed.clamped(to: pageBounds) == CGRect(x: 220, y: 350, width: 80, height: 50))
+    }
+
+    @Test func signaturePlacementUsesClickedPointAsLineAnchor() {
+        let store = PDFEditorStore()
+        let pageBounds = CGRect(x: 0, y: 0, width: 612, height: 792)
+
+        store.addField(
+            kind: .signature,
+            pageIndex: 0,
+            at: CGPoint(x: 300, y: 200),
+            pageBounds: pageBounds,
+            profile: nil,
+            defaultSignatureAssetID: nil,
+            defaultInitialsAssetID: nil
+        )
+
+        let rect = store.fields[0].rectInPageSpace
+        #expect(rect == CGRect(x: 190, y: 186, width: 220, height: 64))
+        #expect(rect.minY < 200)
+        #expect(rect.maxY > 200)
+    }
+
+    @Test func fieldRectResizeFromBottomRightClampsAndHonorsMinimumSize() {
+        let pageBounds = CGRect(x: 0, y: 0, width: 300, height: 300)
+        let field = CGRect(x: 50, y: 100, width: 100, height: 50)
+
+        let expanded = field.resizedFromBottomRight(
+            to: CGPoint(x: 220, y: 60),
+            minimumSize: CGSize(width: 80, height: 30),
+            clampedTo: pageBounds
+        )
+        let minimum = field.resizedFromBottomRight(
+            to: CGPoint(x: 55, y: 148),
+            minimumSize: CGSize(width: 80, height: 30),
+            clampedTo: pageBounds
+        )
+        let clamped = field.resizedFromBottomRight(
+            to: CGPoint(x: 260, y: -100),
+            minimumSize: CGSize(width: 80, height: 30),
+            clampedTo: pageBounds
+        )
+
+        #expect(expanded == CGRect(x: 50, y: 60, width: 170, height: 90))
+        #expect(minimum == CGRect(x: 50, y: 120, width: 80, height: 30))
+        #expect(clamped == CGRect(x: 50, y: 0, width: 210, height: 150))
+    }
+
+    @Test func drawnSignatureRendererNormalizesCanvasStrokes() throws {
+        let data = try #require(SignatureRenderer.renderStrokes([
+            SignatureStroke(points: [
+                CGPoint(x: 18, y: 24),
+                CGPoint(x: 74, y: 72),
+                CGPoint(x: 132, y: 36),
+                CGPoint(x: 186, y: 86),
+                CGPoint(x: 248, y: 40)
+            ])
+        ]))
+        let bitmap = try #require(NSBitmapImageRep(data: data))
+        let renderedBounds = try #require(renderedAlphaBounds(in: bitmap))
+
+        #expect(renderedBounds.width > CGFloat(bitmap.pixelsWide) / 2)
+        #expect(renderedBounds.height > CGFloat(bitmap.pixelsHigh) / 4)
+    }
+
+    @Test func selectedFieldRendererDoesNotFillFieldInterior() throws {
+        let bitmap = try #require(NSBitmapImageRep(
+            bitmapDataPlanes: nil,
+            pixelsWide: 140,
+            pixelsHigh: 100,
+            bitsPerSample: 8,
+            samplesPerPixel: 4,
+            hasAlpha: true,
+            isPlanar: false,
+            colorSpaceName: .deviceRGB,
+            bytesPerRow: 0,
+            bitsPerPixel: 0
+        ))
+        let graphicsContext = try #require(NSGraphicsContext(bitmapImageRep: bitmap))
+        let field = PlacedField(
+            kind: .checkbox,
+            pageIndex: 0,
+            rectInPageSpace: CGRect(x: 20, y: 20, width: 80, height: 50),
+            text: "off",
+            style: .checkbox
+        )
+
+        SigningFieldRenderer.draw(field: field, in: graphicsContext.cgContext, assetImageData: nil, selected: true)
+
+        let centerPixel = try #require(bitmap.colorAt(x: 60, y: 50))
+        #expect(centerPixel.alphaComponent == 0)
     }
 }
 
@@ -105,4 +197,31 @@ enum PDFTestFactory {
         context.closePDF()
         return url
     }
+}
+
+private func renderedAlphaBounds(in bitmap: NSBitmapImageRep) -> CGRect? {
+    var minX = bitmap.pixelsWide
+    var minY = bitmap.pixelsHigh
+    var maxX = 0
+    var maxY = 0
+    var foundPixel = false
+
+    for y in 0..<bitmap.pixelsHigh {
+        for x in 0..<bitmap.pixelsWide {
+            guard let color = bitmap.colorAt(x: x, y: y), color.alphaComponent > 0.01 else { continue }
+            foundPixel = true
+            minX = min(minX, x)
+            minY = min(minY, y)
+            maxX = max(maxX, x)
+            maxY = max(maxY, y)
+        }
+    }
+
+    guard foundPixel else { return nil }
+    return CGRect(
+        x: CGFloat(minX),
+        y: CGFloat(minY),
+        width: CGFloat(maxX - minX + 1),
+        height: CGFloat(maxY - minY + 1)
+    )
 }

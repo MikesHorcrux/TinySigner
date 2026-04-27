@@ -159,12 +159,13 @@ struct ContentView: View {
         let arguments = ProcessInfo.processInfo.arguments
         let environment = ProcessInfo.processInfo.environment
         let isUITest = arguments.contains("--uitest") || environment["TINYSIGNER_UI_TEST"] == "1"
+        let shouldStayEmpty = arguments.contains("--uitest-empty") || environment["TINYSIGNER_UI_TEST_EMPTY"] == "1"
 
         if let path = environment["TINYSIGNER_OPEN_PDF"] ?? launchArgumentValue(named: "--open-pdf", in: arguments) {
             openURL(URL(fileURLWithPath: path), storeRecentDocument: false)
         }
 
-        if isUITest && !editor.hasDocument {
+        if isUITest && !shouldStayEmpty && !editor.hasDocument {
             editor.lastError = nil
             editor.openDemoPDF(named: "TinySigner UI Fixture")
         }

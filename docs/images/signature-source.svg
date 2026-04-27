@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" role="img" aria-labelledby="title desc">
+<title id="title">Signature source picker</title>
+<desc id="desc">A detail view showing typed, drawn, and imported signature options.</desc>
+<rect width="1200" height="560" rx="30" fill="#0c2233"/>
+<rect x="70" y="70" width="640" height="420" rx="24" fill="#fffdf8"/>
+<text x="112" y="130" font-family="Georgia, serif" font-size="34" fill="#132936" font-weight="700">Signature Source</text>
+<rect x="112" y="240" width="440" height="4" fill="#132936" opacity="0.42"/>
+<path d="M126 214 C180 156 220 280 284 214 S400 178 472 210" fill="none" stroke="#0b2940" stroke-width="18" stroke-linecap="round"/>
+<path d="M126 214 C180 156 220 280 284 214 S400 178 472 210" fill="none" stroke="#18c8d0" stroke-width="5" stroke-linecap="round"/>
+<rect x="100" y="172" width="498" height="96" rx="10" fill="none" stroke="#1b99ff" stroke-width="4" stroke-dasharray="12 9"/>
+<rect x="760" y="70" width="370" height="420" rx="24" fill="#1f303a"/>
+<text x="800" y="130" font-family="Avenir Next, sans-serif" font-size="28" fill="#f4fbff" font-weight="700">Selected Field</text>
+<text x="800" y="190" font-family="Avenir Next, sans-serif" font-size="16" fill="#b5c4ca">Signature Source</text>
+<rect x="800" y="210" width="280" height="46" rx="12" fill="#0c1820"/><text x="824" y="240" font-family="Avenir Next, sans-serif" font-size="16" fill="#dff8fb">Typed name: Mike Van</text>
+<rect x="800" y="276" width="280" height="46" rx="12" fill="#18c8d0"/><text x="824" y="306" font-family="Avenir Next, sans-serif" font-size="16" fill="#041014" font-weight="700">Drawn Signature: Mike</text>
+<rect x="800" y="342" width="280" height="46" rx="12" fill="#0c1820"/><text x="824" y="372" font-family="Avenir Next, sans-serif" font-size="16" fill="#dff8fb">Imported Image: PNG</text>
+<text x="800" y="438" font-family="Avenir Next, sans-serif" font-size="15" fill="#aab8bf">Switch each placed field without redrawing.</text>
+</svg>

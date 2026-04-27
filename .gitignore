@@ -1,2 +1,10 @@
 .DS_Store
 /build/
+DerivedData/
+*.xcresult
+*.xcactivitylog
+*.swp
+*.tmp
+*.log
+xcuserdata/
+*.xcuserstate

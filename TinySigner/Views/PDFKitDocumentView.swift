@@ -68,7 +68,14 @@ final class PDFKitDocumentContainerView: NSView {
     private let thumbnailView = PDFThumbnailView()
     private let splitView = NSSplitView()
     private var currentDocument: PDFDocument?
-    private var lastRefreshToken = UUID()
+    private var lastPreviewRenderState: PreviewRenderState?
+
+    private struct PreviewRenderState: Equatable {
+        var fields: [PlacedField]
+        var selectedFieldID: UUID?
+        var signatureAssetsByID: [UUID: Data]
+        var refreshToken: UUID
+    }
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -90,10 +97,17 @@ final class PDFKitDocumentContainerView: NSView {
         refreshToken: UUID
     ) {
         if currentDocument !== document {
+            if let currentDocument {
+                PDFDocumentService.removeTinySignerPreviewAnnotations(from: currentDocument)
+            }
+            if let document {
+                PDFDocumentService.removeTinySignerPreviewAnnotations(from: document)
+            }
             currentDocument = document
             pdfView.document = document
             thumbnailView.pdfView = pdfView
             pdfView.goToFirstPage(nil)
+            lastPreviewRenderState = nil
         }
 
         pdfView.activeTool = activeTool
@@ -107,9 +121,15 @@ final class PDFKitDocumentContainerView: NSView {
             pdfView.scaleFactor = zoomScale
         }
 
-        if lastRefreshToken != refreshToken {
-            lastRefreshToken = refreshToken
-            pdfView.refreshSigningAnnotations()
+        let previewRenderState = PreviewRenderState(
+            fields: fields,
+            selectedFieldID: selectedFieldID,
+            signatureAssetsByID: signatureAssetsByID,
+            refreshToken: refreshToken
+        )
+        if lastPreviewRenderState != previewRenderState {
+            lastPreviewRenderState = previewRenderState
+            pdfView.refreshSigningOverlay()
         }
     }
 
@@ -144,6 +164,49 @@ final class PDFKitDocumentContainerView: NSView {
     }
 }
 
+final class SigningOverlayView: NSView {
+    weak var pdfView: PDFView?
+
+    private var fields: [PlacedField] = []
+    private var selectedFieldID: UUID?
+    private var signatureAssetsByID: [UUID: Data] = [:]
+
+    override var isOpaque: Bool { false }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        nil
+    }
+
+    func configure(fields: [PlacedField], selectedFieldID: UUID?, signatureAssetsByID: [UUID: Data]) {
+        self.fields = fields
+        self.selectedFieldID = selectedFieldID
+        self.signatureAssetsByID = signatureAssetsByID
+        needsDisplay = true
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        guard
+            let context = NSGraphicsContext.current?.cgContext,
+            let pdfView,
+            let document = pdfView.document
+        else { return }
+
+        for field in fields {
+            guard let page = document.page(at: field.pageIndex) else { continue }
+            let viewRect = pdfView.convertPageRectToView(field.rectInPageSpace, from: page)
+            guard viewRect.intersects(dirtyRect) else { continue }
+
+            SigningFieldRenderer.draw(
+                field: field,
+                rect: viewRect,
+                in: context,
+                assetImageData: field.signatureAssetID.flatMap { signatureAssetsByID[$0] },
+                selected: field.id == selectedFieldID
+            )
+        }
+    }
+}
+
 final class SigningPDFView: PDFView {
     var activeTool: SigningTool = .select
     var fields: [PlacedField] = []
@@ -158,21 +221,35 @@ final class SigningPDFView: PDFView {
     var onDeleteSelectedField: (() -> Void)?
     var onPageChange: ((Int) -> Void)?
 
-    private struct DragState {
+    private enum InteractionState {
+        case move(MoveState)
+        case resize(ResizeState)
+    }
+
+    private struct MoveState {
         var fieldID: UUID
         var pageIndex: Int
         var lastPoint: CGPoint
     }
 
-    private var dragState: DragState?
+    private struct ResizeState {
+        var fieldID: UUID
+        var pageIndex: Int
+        var startRect: CGRect
+    }
+
+    private var interactionState: InteractionState?
+    private let overlayView = SigningOverlayView()
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
+        setupOverlay()
         setupNotifications()
     }
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
+        setupOverlay()
         setupNotifications()
     }
 
@@ -180,33 +257,29 @@ final class SigningPDFView: PDFView {
         NotificationCenter.default.removeObserver(self)
     }
 
-    func refreshSigningAnnotations() {
-        guard let document else { return }
-        PDFDocumentService.removeTinySignerPreviewAnnotations(from: document)
+    func refreshSigningOverlay() {
+        overlayView.configure(fields: fields, selectedFieldID: selectedFieldID, signatureAssetsByID: signatureAssetsByID)
+        overlayView.needsDisplay = true
+    }
 
-        for field in fields {
-            guard let page = document.page(at: field.pageIndex) else { continue }
-            let annotation = SigningFieldAnnotation(
-                field: field,
-                assetImageData: field.signatureAssetID.flatMap { signatureAssetsByID[$0] },
-                selected: field.id == selectedFieldID
-            )
-            page.addAnnotation(annotation)
-        }
-        setNeedsDisplay(bounds)
+    override func layout() {
+        super.layout()
+        overlayView.frame = bounds
+        addSubview(overlayView, positioned: .above, relativeTo: nil)
+        overlayView.needsDisplay = true
     }
 
     override func mouseDown(with event: NSEvent) {
         window?.makeFirstResponder(self)
         let viewPoint = convert(event.locationInWindow, from: nil)
-        guard let page = page(for: viewPoint, nearest: true), let document else {
+        guard let page = page(for: viewPoint, nearest: false), let document else {
             super.mouseDown(with: event)
             return
         }
 
         let pageIndex = document.index(for: page)
         let pagePoint = convert(viewPoint, to: page)
-        let pageBounds = page.bounds(for: .mediaBox)
+        let pageBounds = page.bounds(for: displayBox)
 
         if activeTool != .select {
             onCreateField?(activeTool, pageIndex, pagePoint, pageBounds)
@@ -216,7 +289,11 @@ final class SigningPDFView: PDFView {
         if let hitField = hitField(onPage: pageIndex, at: pagePoint) {
             onSelectField?(hitField.id)
             selectedFieldID = hitField.id
-            dragState = DragState(fieldID: hitField.id, pageIndex: pageIndex, lastPoint: pagePoint)
+            if isResizeHandleHit(for: hitField, at: pagePoint) {
+                interactionState = .resize(ResizeState(fieldID: hitField.id, pageIndex: pageIndex, startRect: hitField.rectInPageSpace))
+            } else {
+                interactionState = .move(MoveState(fieldID: hitField.id, pageIndex: pageIndex, lastPoint: pagePoint))
+            }
             onBeginDragField?()
             return
         }
@@ -227,26 +304,51 @@ final class SigningPDFView: PDFView {
     }
 
     override func mouseDragged(with event: NSEvent) {
-        guard let dragState, let page = document?.page(at: dragState.pageIndex), let fieldIndex = fields.firstIndex(where: { $0.id == dragState.fieldID }) else {
+        guard let interactionState else {
             super.mouseDragged(with: event)
             return
         }
 
+        switch interactionState {
+        case .move(let moveState):
+            moveField(with: moveState, event: event)
+        case .resize(let resizeState):
+            resizeField(with: resizeState, event: event)
+        }
+    }
+
+    private func moveField(with moveState: MoveState, event: NSEvent) {
+        guard let page = document?.page(at: moveState.pageIndex), let fieldIndex = fields.firstIndex(where: { $0.id == moveState.fieldID }) else { return }
+
         let viewPoint = convert(event.locationInWindow, from: nil)
         let pagePoint = convert(viewPoint, to: page)
-        let delta = CGPoint(x: pagePoint.x - dragState.lastPoint.x, y: pagePoint.y - dragState.lastPoint.y)
-        let pageBounds = page.bounds(for: .mediaBox)
+        let delta = CGPoint(x: pagePoint.x - moveState.lastPoint.x, y: pagePoint.y - moveState.lastPoint.y)
+        let pageBounds = page.bounds(for: displayBox)
         let movedRect = fields[fieldIndex].rectInPageSpace.offsetBy(dx: delta.x, dy: delta.y).clamped(to: pageBounds)
 
         fields[fieldIndex].rectInPageSpace = movedRect
-        self.dragState = DragState(fieldID: dragState.fieldID, pageIndex: dragState.pageIndex, lastPoint: pagePoint)
-        onMoveField?(dragState.fieldID, movedRect, pageBounds)
-        refreshSigningAnnotations()
+        interactionState = .move(MoveState(fieldID: moveState.fieldID, pageIndex: moveState.pageIndex, lastPoint: pagePoint))
+        onMoveField?(moveState.fieldID, movedRect, pageBounds)
+        refreshSigningOverlay()
+    }
+
+    private func resizeField(with resizeState: ResizeState, event: NSEvent) {
+        guard let page = document?.page(at: resizeState.pageIndex), let fieldIndex = fields.firstIndex(where: { $0.id == resizeState.fieldID }) else { return }
+
+        let viewPoint = convert(event.locationInWindow, from: nil)
+        let pagePoint = convert(viewPoint, to: page)
+        let pageBounds = page.bounds(for: displayBox)
+        let minimumSize = fields[fieldIndex].kind.minimumSize
+        let resizedRect = resizeState.startRect.resizedFromBottomRight(to: pagePoint, minimumSize: minimumSize, clampedTo: pageBounds)
+
+        fields[fieldIndex].rectInPageSpace = resizedRect
+        onMoveField?(resizeState.fieldID, resizedRect, pageBounds)
+        refreshSigningOverlay()
     }
 
     override func mouseUp(with event: NSEvent) {
-        if dragState != nil {
-            dragState = nil
+        if interactionState != nil {
+            interactionState = nil
             onFinishDragField?()
             return
         }
@@ -261,6 +363,11 @@ final class SigningPDFView: PDFView {
         super.keyDown(with: event)
     }
 
+    override func scrollWheel(with event: NSEvent) {
+        super.scrollWheel(with: event)
+        overlayView.needsDisplay = true
+    }
+
     override var acceptsFirstResponder: Bool { true }
 
     private func hitField(onPage pageIndex: Int, at point: CGPoint) -> PlacedField? {
@@ -269,36 +376,47 @@ final class SigningPDFView: PDFView {
         }
     }
 
+    private func isResizeHandleHit(for field: PlacedField, at point: CGPoint) -> Bool {
+        SigningFieldRenderer.resizeHandleRect(for: field.rectInPageSpace)
+            .insetBy(dx: -6, dy: -6)
+            .contains(point)
+    }
+
     private func setupNotifications() {
         NotificationCenter.default.addObserver(self, selector: #selector(pageDidChange), name: .PDFViewPageChanged, object: self)
+        NotificationCenter.default.addObserver(self, selector: #selector(pdfViewGeometryDidChange), name: .PDFViewScaleChanged, object: self)
+        NotificationCenter.default.addObserver(self, selector: #selector(pdfViewGeometryDidChange), name: .PDFViewVisiblePagesChanged, object: self)
     }
 
     @objc private func pageDidChange() {
         guard let page = currentPage, let document else { return }
         onPageChange?(document.index(for: page))
+        overlayView.needsDisplay = true
+    }
+
+    @objc private func pdfViewGeometryDidChange() {
+        overlayView.needsDisplay = true
+    }
+
+    private func setupOverlay() {
+        overlayView.pdfView = self
+        overlayView.frame = bounds
+        overlayView.autoresizingMask = [.width, .height]
+        overlayView.wantsLayer = true
+        overlayView.layer?.backgroundColor = NSColor.clear.cgColor
+        addSubview(overlayView, positioned: .above, relativeTo: nil)
     }
 }
 
-final class SigningFieldAnnotation: PDFAnnotation {
-    static let contentsPrefix = "TinySignerField:"
-
-    private let field: PlacedField
-    private let assetImageData: Data?
-    private let isSelected: Bool
-
-    init(field: PlacedField, assetImageData: Data?, selected: Bool) {
-        self.field = field
-        self.assetImageData = assetImageData
-        self.isSelected = selected
-        super.init(bounds: field.rectInPageSpace, forType: .stamp, withProperties: nil)
-        contents = Self.contentsPrefix + field.id.uuidString
-    }
-
-    required init?(coder: NSCoder) {
-        fatalError("SigningFieldAnnotation is preview-only and is not decoded from PDFs.")
-    }
-
-    override func draw(with box: PDFDisplayBox, in context: CGContext) {
-        SigningFieldRenderer.draw(field: field, in: context, assetImageData: assetImageData, selected: isSelected)
+private extension PDFView {
+    func convertPageRectToView(_ rect: CGRect, from page: PDFPage) -> CGRect {
+        let origin = convert(rect.origin, from: page)
+        let opposite = convert(CGPoint(x: rect.maxX, y: rect.maxY), from: page)
+        return CGRect(
+            x: min(origin.x, opposite.x),
+            y: min(origin.y, opposite.y),
+            width: abs(opposite.x - origin.x),
+            height: abs(opposite.y - origin.y)
+        )
     }
 }

@@ -58,7 +58,7 @@ final class PDFEditorStore: ObservableObject {
 
     func addField(kind: PlacedField.Kind, pageIndex: Int, at point: CGPoint, pageBounds: CGRect, profile: SignerProfile?, defaultSignatureAssetID: UUID?, defaultInitialsAssetID: UUID?) {
         let size = kind.defaultSize
-        let rect = CGRect(origin: .zero, size: size).centered(on: point, clampedTo: pageBounds).snapped(to: 2)
+        let rect = defaultRect(for: kind, at: point, size: size, pageBounds: pageBounds)
         let field = PlacedField(
             kind: kind,
             pageIndex: pageIndex,
@@ -73,6 +73,23 @@ final class PDFEditorStore: ObservableObject {
         statusMessage = "Placed \(kind.title.lowercased()) on page \(pageIndex + 1)."
     }
 
+    private func defaultRect(for kind: PlacedField.Kind, at point: CGPoint, size: CGSize, pageBounds: CGRect) -> CGRect {
+        switch kind {
+        case .signature:
+            return CGRect(x: point.x - size.width / 2, y: point.y - size.height * 0.22, width: size.width, height: size.height)
+                .clamped(to: pageBounds)
+                .snapped(to: 2)
+        case .initials:
+            return CGRect(x: point.x - size.width / 2, y: point.y - size.height * 0.24, width: size.width, height: size.height)
+                .clamped(to: pageBounds)
+                .snapped(to: 2)
+        case .text, .date, .checkbox:
+            return CGRect(origin: .zero, size: size)
+                .centered(on: point, clampedTo: pageBounds)
+                .snapped(to: 2)
+        }
+    }
+
     func updateFieldRect(id: UUID, rect: CGRect, pageBounds: CGRect, recordUndo: Bool = true) {
         guard let index = fields.firstIndex(where: { $0.id == id }) else { return }
         var updated = fields
@@ -84,6 +101,25 @@ final class PDFEditorStore: ObservableObject {
         guard let selectedFieldID, let index = fields.firstIndex(where: { $0.id == selectedFieldID }) else { return }
         var updated = fields
         transform(&updated[index])
+        applyFields(updated, recordUndo: true)
+    }
+
+    func resizeSelectedField(width: CGFloat? = nil, height: CGFloat? = nil) {
+        guard
+            let selectedFieldID,
+            let index = fields.firstIndex(where: { $0.id == selectedFieldID }),
+            let pageBounds = pageBounds(for: fields[index].pageIndex)
+        else { return }
+
+        var updated = fields
+        let minimumSize = updated[index].kind.minimumSize
+        if let width {
+            updated[index].rectInPageSpace.size.width = max(width, minimumSize.width)
+        }
+        if let height {
+            updated[index].rectInPageSpace.size.height = max(height, minimumSize.height)
+        }
+        updated[index].rectInPageSpace = updated[index].rectInPageSpace.clamped(to: pageBounds).snapped(to: 2)
         applyFields(updated, recordUndo: true)
     }
 
@@ -209,6 +245,10 @@ final class PDFEditorStore: ObservableObject {
         case .initials: initialsID
         case .text, .date, .checkbox: nil
         }
+    }
+
+    private func pageBounds(for pageIndex: Int) -> CGRect? {
+        document?.page(at: pageIndex)?.bounds(for: .cropBox)
     }
 
     static func formattedDate(using dateFormat: String?) -> String {

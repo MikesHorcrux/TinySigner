@@ -45,6 +45,7 @@ struct EditorWorkspaceView: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("editorWorkspace")
     }
 }

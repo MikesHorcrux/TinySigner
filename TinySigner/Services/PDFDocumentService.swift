@@ -3,6 +3,10 @@ import Foundation
 import PDFKit
 import UniformTypeIdentifiers
 
+enum SigningPreviewAnnotation {
+    static let contentsPrefix = "TinySignerField:"
+}
+
 struct PDFDocumentService {
     enum ServiceError: LocalizedError {
         case cannotOpenPDF
@@ -103,7 +107,7 @@ struct PDFDocumentService {
     static func removeTinySignerPreviewAnnotations(from document: PDFDocument) {
         for pageIndex in 0..<document.pageCount {
             guard let page = document.page(at: pageIndex) else { continue }
-            for annotation in page.annotations where annotation is SigningFieldAnnotation || annotation.contents?.hasPrefix(SigningFieldAnnotation.contentsPrefix) == true {
+            for annotation in page.annotations where annotation.contents?.hasPrefix(SigningPreviewAnnotation.contentsPrefix) == true {
                 page.removeAnnotation(annotation)
             }
         }

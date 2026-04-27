@@ -85,27 +85,35 @@ struct InspectorPanelView: View {
                 }
 
                 if field.kind == .signature || field.kind == .initials {
-                    Picker("Asset", selection: Binding<UUID?>(
-                        get: { editor.selectedField?.signatureAssetID },
-                        set: { value in editor.updateSelectedField { $0.signatureAssetID = value } }
-                    )) {
-                        Text("Typed fallback").tag(Optional<UUID>.none)
-                        ForEach(assetChoices(for: field.kind), id: \.id) { asset in
-                            Text(asset.name).tag(Optional(asset.id))
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Signature Source")
+                            .font(.subheadline.weight(.semibold))
+                        Picker("Signature Source", selection: Binding<UUID?>(
+                            get: { editor.selectedField?.signatureAssetID },
+                            set: { value in editor.updateSelectedField { $0.signatureAssetID = value } }
+                        )) {
+                            Text(typedSourceTitle(for: field.kind)).tag(Optional<UUID>.none)
+                            ForEach(assetChoices(for: field.kind), id: \.id) { asset in
+                                Text(assetSourceTitle(asset)).tag(Optional(asset.id))
+                            }
                         }
+                        .pickerStyle(.menu)
+                        Text("Choose Typed name/initials, a saved drawing, or an imported image for this placed field.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
 
                 Stepper(value: Binding(
                     get: { Double(editor.selectedField?.rectInPageSpace.size.width ?? 0) },
-                    set: { value in editor.updateSelectedField { $0.rectInPageSpace.size.width = CGFloat(value) } }
+                    set: { value in editor.resizeSelectedField(width: CGFloat(value)) }
                 ), in: 12...720, step: 2) {
                     Text("Width: \(Int(field.rectInPageSpace.width))")
                 }
 
                 Stepper(value: Binding(
                     get: { Double(editor.selectedField?.rectInPageSpace.size.height ?? 0) },
-                    set: { value in editor.updateSelectedField { $0.rectInPageSpace.size.height = CGFloat(value) } }
+                    set: { value in editor.resizeSelectedField(height: CGFloat(value)) }
                 ), in: 12...260, step: 2) {
                     Text("Height: \(Int(field.rectInPageSpace.height))")
                 }
@@ -125,6 +133,23 @@ struct InspectorPanelView: View {
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    private func typedSourceTitle(for kind: PlacedField.Kind) -> String {
+        switch kind {
+        case .signature:
+            let name = profile?.fullName.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return name.isEmpty ? "Typed name from Value" : "Typed name: \(name)"
+        case .initials:
+            let initials = profile?.initials.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return initials.isEmpty ? "Typed initials from Value" : "Typed initials: \(initials)"
+        case .text, .date, .checkbox:
+            return "Typed"
+        }
+    }
+
+    private func assetSourceTitle(_ asset: SignatureAsset) -> String {
+        "\(asset.kind.title): \(asset.name)"
     }
 
     private func assetChoices(for kind: PlacedField.Kind) -> [SignatureAsset] {
@@ -147,6 +172,7 @@ struct InspectorPanelView: View {
         modelContext.insert(asset)
         profile.defaultSignatureAssetID = asset.id
         profile.updatedAt = Date()
+        saveSignatureLibrary()
     }
 
     private func saveTypedInitials(profile: SignerProfile) {
@@ -158,6 +184,7 @@ struct InspectorPanelView: View {
         modelContext.insert(asset)
         profile.defaultInitialsAssetID = asset.id
         profile.updatedAt = Date()
+        saveSignatureLibrary()
     }
 
     private func saveDrawnSignature(profile: SignerProfile) {
@@ -170,6 +197,7 @@ struct InspectorPanelView: View {
         profile.defaultSignatureAssetID = asset.id
         profile.updatedAt = Date()
         drawingStrokes = []
+        saveSignatureLibrary()
     }
 
     private func importSignatureImage(profile: SignerProfile) {
@@ -191,6 +219,7 @@ struct InspectorPanelView: View {
             modelContext.insert(asset)
             profile.defaultSignatureAssetID = asset.id
             profile.updatedAt = Date()
+            saveSignatureLibrary()
         } catch {
             editor.lastError = error.localizedDescription
         }
@@ -205,11 +234,20 @@ struct InspectorPanelView: View {
         }
         modelContext.delete(asset)
         profile.updatedAt = Date()
+        saveSignatureLibrary()
     }
 
     private func assetName(prefix: String, value: String) -> String {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? prefix : "\(prefix) - \(trimmed)"
+    }
+
+    private func saveSignatureLibrary() {
+        do {
+            try modelContext.save()
+        } catch {
+            editor.lastError = "TinySigner could not save the signature library: \(error.localizedDescription)"
+        }
     }
 }
 

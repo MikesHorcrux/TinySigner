@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+<title id="title">TinySigner editor overview</title>
+<desc id="desc">A stylized TinySigner editor window with thumbnails, PDF canvas, signature field, and inspector.</desc>
+<defs>
+  <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#082135"/><stop offset="1" stop-color="#165f70"/></linearGradient>
+  <linearGradient id="accent" x1="0" x2="1"><stop offset="0" stop-color="#1cd2d6"/><stop offset="1" stop-color="#2b83ff"/></linearGradient>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="28" stdDeviation="28" flood-color="#00151f" flood-opacity="0.35"/></filter>
+</defs>
+<rect width="1600" height="900" fill="url(#bg)"/>
+<circle cx="1240" cy="140" r="320" fill="#1cd2d6" opacity="0.12"/>
+<circle cx="260" cy="800" r="420" fill="#2b83ff" opacity="0.10"/>
+<g filter="url(#shadow)">
+  <rect x="110" y="95" width="1380" height="710" rx="34" fill="#15222a"/>
+  <rect x="110" y="95" width="1380" height="56" rx="34" fill="#21323b"/>
+  <circle cx="150" cy="123" r="8" fill="#ff6860"/><circle cx="178" cy="123" r="8" fill="#ffbd4a"/><circle cx="206" cy="123" r="8" fill="#31c85d"/>
+  <rect x="130" y="175" width="145" height="600" rx="18" fill="#24323a"/>
+  <rect x="158" y="208" width="88" height="122" rx="8" fill="#f6f1e8"/><rect x="175" y="232" width="54" height="8" rx="4" fill="#aeb8bd"/><rect x="175" y="255" width="50" height="8" rx="4" fill="#c9d0d3"/>
+  <rect x="158" y="354" width="88" height="122" rx="8" fill="#f6f1e8"/><rect x="175" y="405" width="54" height="8" rx="4" fill="#aeb8bd"/>
+  <rect x="306" y="175" width="780" height="600" rx="18" fill="#101820"/>
+  <rect x="396" y="194" width="600" height="560" rx="8" fill="#fffdf8"/>
+  <text x="446" y="252" font-family="Georgia, serif" font-size="28" fill="#17232b" font-weight="700">Service Agreement</text>
+  <rect x="446" y="292" width="470" height="10" rx="5" fill="#31424b" opacity="0.22"/><rect x="446" y="324" width="412" height="10" rx="5" fill="#31424b" opacity="0.18"/><rect x="446" y="356" width="500" height="10" rx="5" fill="#31424b" opacity="0.18"/>
+  <rect x="446" y="542" width="390" height="3" fill="#17232b" opacity="0.55"/>
+  <path d="M474 511 C532 452 573 580 632 512 S744 482 804 506" fill="none" stroke="#0d2637" stroke-width="18" stroke-linecap="round"/>
+  <path d="M474 511 C532 452 573 580 632 512 S744 482 804 506" fill="none" stroke="#18c8d0" stroke-width="5" stroke-linecap="round"/>
+  <rect x="432" y="466" width="448" height="112" rx="10" fill="none" stroke="url(#accent)" stroke-width="4" stroke-dasharray="14 10"/>
+  <rect x="864" y="562" width="18" height="18" fill="#1b99ff" stroke="#ffffff" stroke-width="4"/>
+  <text x="446" y="612" font-family="Avenir Next, sans-serif" font-size="18" fill="#5f6b72">Signature</text>
+  <rect x="1108" y="175" width="350" height="600" rx="18" fill="#24323a"/>
+  <text x="1138" y="225" font-family="Avenir Next, sans-serif" font-size="24" fill="#f4fbff" font-weight="700">Selected Field</text>
+  <text x="1138" y="276" font-family="Avenir Next, sans-serif" font-size="16" fill="#a8b5bd">Signature Source</text>
+  <rect x="1138" y="296" width="278" height="42" rx="10" fill="#101820"/><text x="1160" y="323" font-family="Avenir Next, sans-serif" font-size="15" fill="#e8f8fb">Drawn Signature: Mike</text>
+  <rect x="1138" y="386" width="278" height="42" rx="10" fill="#101820"/><text x="1160" y="413" font-family="Avenir Next, sans-serif" font-size="15" fill="#e8f8fb">Width 220</text>
+  <rect x="1138" y="444" width="278" height="42" rx="10" fill="#101820"/><text x="1160" y="471" font-family="Avenir Next, sans-serif" font-size="15" fill="#e8f8fb">Height 64</text>
+  <rect x="1138" y="604" width="128" height="44" rx="12" fill="url(#accent)"/><text x="1174" y="632" font-family="Avenir Next, sans-serif" font-size="16" fill="#041014" font-weight="700">Export</text>
+</g>
+</svg>
